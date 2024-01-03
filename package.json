@@ -1,0 +1,22 @@
+{
+  "name": "openhab-spot-price-optimizer",
+  "version": "1.0.0",
+  "description": "openHAB Spot Price Optimizer modules helps to optimize energy consumption to the cheapest hours of the day.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/masipila/openhab-spot-price-optimizer.git"
+  },
+  "keywords": [
+    "openHAB"
+  ],
+  "author": "Markus Sipilä",
+  "license": "EPL-2.0",
+  "bugs": {
+    "url": "https://github.com/masipila/openhab-spot-price-optimizer/issues"
+  },
+  "homepage": "https://github.com/masipila/openhab-spot-price-optimizer#readme"
+}
