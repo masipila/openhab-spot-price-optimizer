@@ -7,7 +7,7 @@ class Influx {
      * Constructor.
      */ 
     constructor() {
-	this.config = require('spot-price-optimizer/config.js');
+	this.config = require('openhab-spot-price-optimizer/config.js');
     }
 
     /**
