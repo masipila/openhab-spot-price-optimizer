@@ -19,7 +19,7 @@ The blue area represents the hourly spot prices. The red bars are the _control p
 The yellow bars are the _control points_ when the compressor of a ground source heat pump is allowed to run. On this example day, 12 hours of heating is distributed so that the morning and evening peak hours are avoided.
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/fced817e-83d7-464c-bef2-a9d9c20e639a)
 
-**How to control your devices via openHAB**
+# How to control your devices via openHAB
 openHAB has Bindings for many different devices. If you are new to openHAB, [learn the key concepts of Things, Items and Channels first](https://www.openhab.org/docs/concepts/#things-channels-bindings-items-and-links). If your device in not connected online, it is usually possible to control them using a relay. 
 
 Step by step tutorials:
