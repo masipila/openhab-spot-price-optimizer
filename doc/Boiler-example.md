@@ -31,3 +31,30 @@ I originally had this connection option so I printed a warning sticker to the co
 ### Hardware connections: option 2
 A safer connection option is to have a second relay in your electrical cabinet so that the connection from the GPIO controlled relay board to this second relay is only 24V. This way you don’t need to bring 230V cables to the box of your Raspberry and relay board. My setup was updated to this connection option (again by an authorized electrician) for safety reasons.
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/08179216-9e9a-4c87-8a6b-98d76177c93b)
+
+## Controlling the relays via openHAB GPIO Binding
+Warning: Do not have the physical cabling connected between the relays and your devices when you are experimenting and building the openHAB solution. The relays make a loud click when their state changes and there is also a green led indicating when the relay pulls so you can easily notice if your on/off state changes work.
+
+First install openHab [GPIO binding](https://www.openhab.org/addons/bindings/gpio/) from Settings - Bindings. 
+- You will also need to install pigpio-remote as instruceted on the GPIO binding instructions.
+
+Create a new _Thing_ using the GPIO Binding
+
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/92eb28fc-9004-453e-9316-05c04cefda4a)
+
+Give a unique ID for the Thing. We use `Boiler` in this example. Remember to set the Network Address as ::1 like mentioned in the GPIO binding documentation linked above.
+
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/ff765c7e-5a83-4dba-8dbf-e1c491c77fe0)
+
+Create a Channel, configure it to use GPIO Digital Output and configure the GPIO Pin number that matches the relay that you will be using. The Waveshare relay board that I use have its GPIO pin numbers documented at [RPi Relay Board (B) - Waveshare Wiki](https://www.waveshare.com/wiki/RPi_Relay_Board_(B)). The GPIO Pin 21 matches to the relay 7 of the board.
+
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/0f34ae66-0424-4f03-89d8-99e88ce070a3)
+
+Finally, add a link to a new Item to this Channel. Note that the name of the Item we use here is `BoilerPower`, it will be used in the Rules later on. The type of this Item is Switch as illustrated in the picture below. You can also add other metadata to the Item so that you can benefit from other nice openHAB UI features.
+
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/97e38359-8ff5-472f-99be-be5678836efb)
+
+You should now be able to toggle the relay 7 of your relay board on and off using the switch Item `BoilerPower` you just created. You can find this newly created Item in the Items menu. You can also add this switch Item to an openHAB _Page_. If you hear loud clicks from the relay board and see the green led turning on/off, everything works as expected.
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/74a31962-c446-475a-959e-e9511bf816dd)
+
+Hint: If you installed openHabian SD image, you can use Frontail log viewer at port 9001 of your Raspberry using your web browser. You can see log entries when the state of your Item and Thing change. If you don't have Frontail to view the logs using a browser, you can always view the openHAB log files from the command line.
