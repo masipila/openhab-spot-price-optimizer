@@ -58,9 +58,10 @@ The spot prices are read from the Entso-E Transparency Platform API.
 ## Install openhab-spot-price-optimizer scripts
 - The openhab-spot-price-optimizer is written in Javascript and published as a npm package.
 - Take a shell connection to your openHAB server and navigate to `openhab/conf/automation/js` directory.
-- Install the package with a command `npm install openhab-spot-price-optimizer`. This will create a directory `openhab/conf/automation/js/node_modules` (if it does not exist already) and download openhab-spot-price-optimizer there.
-- WARNING: If you have previously manually added scripts to the `node_modules` directory, make a backup of them. `npm install` will erase all files and directories under `node_modules` which are not installed with the `npm install` command. [See openHAB documentation on Javascript libraries](https://www.openhab.org/addons/automation/jsscripting/#libraries).
-- Edit the `config.js` file of in the ´openhab-spot-price-optimizer` directory:
+- Install the package with a command `npm install openhab-spot-price-optimizer`.
+   - This will create a directory `openhab/conf/automation/js/node_modules` (if it does not exist already) and download openhab-spot-price-optimizer there.
+   - WARNING: If you have previously added scripts to the `node_modules` directory manually, make a backup of them. `npm install` will erase all files and directories under `node_modules` which are not installed with the `npm install` command. [See openHAB documentation on Javascript libraries](https://www.openhab.org/addons/automation/jsscripting/#libraries).
+- Edit the `config.js` file of in the `openhab-spot-price-optimizer` directory:
   - Add your influxDB connection parameters and authentication token
   - Add your Entso-E API token and bidding zone 
 - You can now write openHAB Rules which can fetch the spot prices from Entso-E API and use the openhab-spot-price-optimizer algorithms. See examples below.
