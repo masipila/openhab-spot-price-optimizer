@@ -1,0 +1,1 @@
+# Usage example: Optimizing a boiler to heat domestic hot water on the cheapest hours
