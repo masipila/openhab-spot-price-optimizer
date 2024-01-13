@@ -23,7 +23,7 @@ The yellow bars are the _control points_ when the compressor of a ground source 
 openHAB has Bindings for many different devices. If you are new to openHAB, [learn the key concepts of Things, Items and Channels first](https://www.openhab.org/docs/concepts/#things-channels-bindings-items-and-links). If your device in not connected online, it is usually possible to control them using a relay. 
 
 Step by step tutorials:
-- [Control the compressor of a Nibe F-1226 ground source heat pump using a relay](https://github.com/masipila/openhab-spot-price-optimizer/doc/Nibe-example.md)
+- [Control the compressor of a Nibe F-1226 ground source heat pump using a relay](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Nibe-example.md))
 
 # Pre-requisites
 
