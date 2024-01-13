@@ -12,7 +12,7 @@ This solution helps to schedule the consumption of electricity to the cheapest h
 The solution can be applied for a variety of devices that you can contorl via openHAB, including heating of your house, heating the domestic hot water, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to run. The two figures below illustrates two use cases: heating of the house and charging of an electric vehicle.
 
 **Example 1: Control points for charging an electric vehicle**
-The blue area represents the hourly spot prices. The red bars are the _control points_ for charging the car for two hours between 01:00-03:00 when the prices are cheap.   
+The blue area represents the hourly spot prices. The red bars are the _control points_ for charging the car for two hours between 03:00-05:00 when the prices are cheap.   
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/36d0bb9c-7707-4177-89b9-86f616823e8e)
 
 **Example 2: Control points for heating the house with a ground source heat pump**
