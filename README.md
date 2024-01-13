@@ -5,25 +5,35 @@ openHAB Spot Price Optimizer help you to optimize energy consumption to the chea
 This solution is provided as an inspiration for other openHAB community members. I disclaim all warranties and responsibilities if you use this solution. In no event shall I be liable for any direct or indirect damages resulting of use this solution. If your setup involves high voltage connections, they must always be designed and done by an authorized electrician.
 
 # Conceptual description
-Spot priced electricity contract means that the price of electricity is different for every hour of the day. The day-ahead prices are published at around 13.15 CET/CEST in the Entso-E Transparency Platform.
+Spot priced electricity contract means that the price of electricity is different for every hour of the day. The day-ahead prices are published at around 13.15 CET/CEST on the [Entso-E Transparency Platform](https://transparency.entsoe.eu).
 
-This solution helps to schedule the consumption of electricity to the cheapest hours of the day. The figure below shows the result of this kind of an optimization. The blue bars represent the consumption (in kWh), whereas the green line represent the spot price of that hour (c / kWh). As you can see, the consumption peaks systematically when the prices are at lowest.
-
-The solution can be applied for a variety of devices that you can contorl via openHAB, including heating of your house, heating the domestic hot water, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to run. The two figures below illustrates two use cases: heating of the house and charging of an electric vehicle.
+This solution helps to automatically schedule the consumption of electricity to the cheapest hours of the next day. The solution can be applied for a variety of devices that you can contorl via openHAB, including heating of your house, heating the domestic hot water with a water boiler, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to run. The picutres below illustrate two use cases: charging an electric vehicle in the night and heating of a house.
 
 **Example 1: Control points for charging an electric vehicle**
-The blue area represents the hourly spot prices. The red bars are the _control points_ for charging the car for two hours between 03:00-05:00 when the prices are cheap.   
+
+The blue area represents the hourly prices of electricity. The red bars are the _control points_ for charging the car during the two cheapest hours of the night.   
+
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/36d0bb9c-7707-4177-89b9-86f616823e8e)
 
 **Example 2: Control points for heating the house with a ground source heat pump**
+
 The yellow bars are the _control points_ when the compressor of a ground source heat pump is allowed to run. On this example day, 12 hours of heating is distributed so that the morning and evening peak hours are avoided.
+
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/fced817e-83d7-464c-bef2-a9d9c20e639a)
 
 # How to control your devices via openHAB
-openHAB has Bindings for many different devices. If you are new to openHAB, [learn the key concepts of Things, Items and Channels first](https://www.openhab.org/docs/concepts/#things-channels-bindings-items-and-links). If your device in not connected online, it is usually possible to control them using a relay. 
+The openhab-spot-price-optimizer scripts can be used with all kinds of devices, as long as you can control them using openHAB.
+- [openHAB has Bindings available for many different devices](https://www.openhab.org/addons/#binding).
+- If you are new to openHAB, it is recommended to [learn the key concepts of Things, Items and Channels first](https://www.openhab.org/docs/concepts/#things-channels-bindings-items-and-links).
 
-Step by step tutorials:
-- [Control the compressor of a Nibe F-1226 ground source heat pump using a relay](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Nibe-example.md))
+If your device in not connected online or there is no binding available to control it, it is usually possible to control them using a relay.
+- Below are two step-by-step tutorials where openHAB runs on a Raspberry Pi which is connected to a relay board.
+- However, the openhab-spot-price-optimizer does not require the usage of a Raspberry relay board. You could also use for example [Shelly Pro smart relays](https://www.shelly.com) using the [Shelly Binding](https://www.openhab.org/addons/bindings/shelly/).
+- And of course, if your device can already by controlled via a binding like [Mitsubishi MELCloud binding](https://www.openhab.org/addons/bindings/melcloud/), you can use that instead using relays.
+
+ Two step by step tutorials are available below:
+- [Control the compressor of a Nibe F-1226 ground source heat pump using a relay](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Nibe-example.md)
+- [Control a water boiler using a relay and a contactor](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Boiler-example.md) 
 
 # Pre-requisites
 
