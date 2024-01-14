@@ -2,26 +2,111 @@
 This documenation page shows an example how to use the `openhab-spot-price-optimizer` to find cheapest hours of the day to heat the domestic hot water with a boiler.
 
 # Pre-requisites
-- The boiler can be controlled via openHAB, in other words there is an Item that can toggle the power supply of the boiler.
+- The boiler can be controlled via openHAB, in other words there is an Item that can turn the boiler ON and OFF.
   - [See example how to control boiler via openHAB](./Boiler-example.md)
 - Fetching of spot prices is working
   - [See example of how to fetch spot prices from Entso-E API](./Entso-E-example.md)
  
-# Create an Number Item BoilerHours that defines how many hours the boiler needs per day
-- In order to optimize the heating, our optimizing script needs to know how many hours of heating will be needed.
+# Create two new Items
+
+## Create an Item 'BoilerHours'
+- In order to optimize the heating of domestic hot water, our optimizing script needs to know how many hours the boiler needs to be ON to reach its thermostate max temperature.
 - We don't want to hard code this number to our script, so let's create an Item `BoilerHours` which we can easily update with an user interface widget.
+- [See example of a Control parameters page](./Control-parameters-UI-example.md)
+- WARNING: Do not try to optimize the heating of hot water too agressively. The temperature should never drop below XX celsius because legionella bacteria can reproduce in temperatures between 
   
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/fc0e1cdc-dc44-4dc5-a0b4-55c07342fd65)
 
-## Create a new page to the sidebar for all control parameters
-Let's create a new page to the main sidebar which will contain all control parameters so that they can easily be updated.
+## Create an item 'BoilerControl' that defines the control points for the boiler
+- The script defined in the next chapter will find optimal time when the boiler should heat the domestic hot water
+- In order to visualize this result, create an Item called `BoilerControl` with a type Number
+- [See example of control point visualization chart](./Control-point-visualization.md)
 
-- Go to Settings / Pages and create a new Layout page
-- Let's call this page `ControlParameters` and make it visible in the sidebar
-- Add a new Row, Add a new Column to this row and finally, add a new _Stepper Card_ so that the result looks like this
-- Click the _configure widget_ icon next (highlighted in red in the picture above) and link your newly created Item `BoilerHours` to the Stepper Card as illustrated in the second screenshot below.
-- You can now easily click the + and - buttons to increase or decrease the number of hours you want your boiler to run each day.
+![image](boiler-control-item.png)
 
-![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/badcdebb-42ce-4fe7-a4d8-111f354bf1a3)
-![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/900db75a-3a3b-45e6-961a-a4e3d8567556)
+# Create a Rule 'BoilerControlOptimizer' to find an optimal schedule
+- This rule will create the _control points_ for each hour of the day
+- Control point value 1 means the power supply will be ON during that hour and value 0 means that power supply will be OFF during that hour.
+- This Rule will be triggered whenever the Item `BoilerHours` changes. We will also invoke this Rule right after the spot prices have been fetched.
 
+## Inline script action for the rule
+- The following rule first reads the SpotPrice values from midnight to midnight
+- It then reads how many hours the boiler needs to be ON from the `BoilerHours` item
+- It then finds the cheapest consecutive period for this many hours. All remaining hours will be blocked.
+- Finally, the control points will be saved to InfluxDB as `BoilerControl`.
+
+```Javascript
+// Load modules. Database connection parameters must be defined in config.js.
+DateHelper = require('openhab-spot-price-optimizer/date-helper.js');
+Influx = require('openhab-spot-price-optimizer/influx.js');
+GenericOptimizer = require('openhab-spot-price-optimizer/generic-optimizer.js');
+
+// Create objects.
+dh = new DateHelper.DateHelper();
+influx = new Influx.Influx();
+optimizer = new GenericOptimizer.GenericOptimizer();
+
+// Read spot prices from InfluxDB and pass them for the optimizer.
+start = dh.getMidnight('start');
+stop = dh.getMidnight('stop');
+prices = influx.getPoints('SpotPrice', start, stop);
+optimizer.setPrices(prices);
+
+// Read how many hours are needed from the BoilerHours item.
+item = items.getItem("BoilerHours");
+hours = Math.round(item.state);
+
+// Optimize the control points and save them to the database.
+optimizer.allowPeriod(hours);
+optimizer.blockRemainingHours();
+points = optimizer.getControlPoints();
+influx.writePoints('BoilerControl', points);
+```
+
+The `GenericOptimizer` optimizing class provides has the following functions:
+- `allowHours(N)`: Finds N cheapest hours from the given spot prices and allows them.
+- `allowPeriods(N)`: Finds the cheapest consequtive N hour period from the given spot prices and allows them.
+- `blocHours(N)`: Finds N most expensive hours from the given spot prices and blocks them.
+- `blockPeriod(N)`: Finds the most expensive consequtive N hour period from the given spot prices and blocks them.
+- `allowRemainingHours()`: Allows all remaining hours from the spot prices which have not been allowed or blocked yet.
+- `blockRemainingHours()`: Blocks all remaining hours from the spot prices which have not been allowed or blocked yet.
+
+## Invoke this Rule also after the spot prices have been fetched
+- The rule was defined to be run every time after the item `BoilerHours` changes. But what if this value is kept unchanged day after a day?
+- The solution is to modify the previously created `FetchSpotPrices` Rule so that we execute the `BoilerControlOptimizer` Rule as an additional action immeidately after the spot prices have been fetched.
+- Go to edit the previously created `FetchSpotPrices` Rule and add the action as illustrated in the picture below.
+
+![image](fetch-spot-price-execute-boiler-optimization.png)
+
+# Create a Rule 'BoilerHourly' to toggle the boiler ON and OFF
+- This rule will run every full hour and turn the boiler ON or OFF based on the control point of that hour
+- If the boiler is currently OFF and the control point for the new hour is 1, the boiler will be turned ON and vice versa.
+
+## Inline script action for the rule
+```Javascript
+// Load modules. Database connection parameters must be defined in config.js.
+DateHelper = require('openhab-spot-price-optimizer/date-helper.js');
+Influx = require('openhab-spot-price-optimizer/influx.js');
+
+// Create objects.
+dh = new DateHelper.DateHelper();
+influx = new Influx.Influx();
+
+// Read the control value for the current hour from the database.
+start = dh.getCurrentHour();
+control = influx.getCurrentControl('BoilerControl', start);
+
+// BoilerPower: Send the commands if state change is needed.
+item = items.getItem("BoilerPower");
+if (item.state == "ON" && control == 0) {
+  console.log("Boiler: Send OFF")
+  item.sendCommand('OFF');
+}
+else if (item.state == "OFF" && control == 1) {
+  console.log("Boiler: Send OFF")
+  item.sendCommand('ON');
+}
+else {
+  console.log("Boiler: No state change needed")  
+}
+```
