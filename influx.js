@@ -22,17 +22,17 @@ class Influx {
      *   Returns 1 or 0. If no control is found, defaults to 1.
      */
     getCurrentControl(measurement, start) {
-	console.log('influx.js: Getting the current control value for ' + measurement + '...');
+	console.log('influx.js: Getting current value for ' + measurement + '...');
 	let stop = new Date(start.getTime());
 	stop.setHours(stop.getHours() + 1);
 	let points = this.getPoints(measurement, start, stop);
 	if (points.length) {
 	    const control = points[0].value;
-	    console.log('influx.js: Current control for ' + measurement + ': ' + control);
+	    console.log('influx.js: Current value for ' + measurement + ': ' + control);
 	    return control;
 	}
 	else {
-	    console.log('influx.js: Current control not found for ' + measurement + ', defaulting to 1!');
+	    console.log('influx.js: Current value not found for ' + measurement + ', defaulting to 1!');
 	    return 1;
 	}
     }
