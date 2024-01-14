@@ -1,6 +1,11 @@
 # Usage example: Optimizing a boiler to heat domestic hot water on the cheapest hours
 This documenation page gives an example how to use the `GenericOptimizer` class of the `openhab-spot-price-optimizer` module to find cheapest hours of the day to heat the domestic hot water. As the name suggests, the optimization algorithms are generic and can be used for many different use cases. 
 
+**WARNING:** Do not try to optimize the heating of domestic hot water too agressively.
+- The boiler should always have enough hours to reach the thermostate max temperature.
+- Legionella bacteria reproduces in temperatures between 20 - 45 ° celcius.
+- In Finland, there is a law that the water temperature in the boiler must always be at least 55 ° celcius to ensure that legionella bacteria will die.
+
 # Pre-requisites
 - The boiler can be controlled with an openHAB Item.
   - [See example how to control boiler via openHAB](./Boiler-example.md)
@@ -11,20 +16,18 @@ This documenation page gives an example how to use the `GenericOptimizer` class 
 
 ## Create an Item 'BoilerHours'
 - In order to optimize the heating of domestic hot water, our optimizing script needs to know how many hours the boiler needs to be ON to reach its thermostate max temperature.
-- We don't want to hard code this number to our script, so let's create an Item `BoilerHours` which we can easily update with an user interface widget. [See an example of a Control parameters page](./Control-parameters-UI-example.md)
-- WARNING: Do not try to optimize the heating of hot water too agressively.
-  - The boiler should always have enough hours to reach the thermostate max temperature.
-  - Legionella bacteria reproduces in temperatures between 20 - 45 ° celcius.
-  - In Finland, there is a law that the water temperature in the boiler must always be at least 55 ° celcius to ensure that legionella bacteria will die.
+- We don't want to hard code this number to our script, so let's create an Item `BoilerHours` which we can easily update with an user interface widget.
+- The type of this Item must be Number
+- [See an example of a Control parameters page which shows how this value can be easily changed](./Control-parameters-UI-example.md)
   
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/fc0e1cdc-dc44-4dc5-a0b4-55c07342fd65)
 
 ## Create an item 'BoilerControl'
-- The rule below optimizes the time when the boiler should heat water and writes `BoilerControl` _control points_ to the Influx database.
+- The rule below optimizes when the boiler should heat water and writes `BoilerControl` _control points_ to the Influx database.
 - The type of this Item must be Number
 - [See an example of control point visualization chart](./Control-point-visualization.md)
 
-![image](boiler-control-item.png)
+![BoilerControlItem](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/5d03b59d-d124-4121-99a9-16d05696b4d8)
 
 # Create a Rule 'BoilerControlOptimizer' to find an optimal schedule
 - This rule will create the _control points_ for each hour of the day
@@ -80,7 +83,7 @@ The `GenericOptimizer` optimizing class provides has the following functions:
 - The solution is to modify the previously created `FetchSpotPrices` Rule so that we execute the `BoilerControlOptimizer` rule as an additional action immeidately after the spot prices have been fetched.
 - Go to edit the previously created `FetchSpotPrices` Rule and add the action as illustrated in the picture below.
 
-![image](fetch-spot-price-execute-boiler-optimization.png)
+![fetch-spot-price-execute-boiler-optimization](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/3a296b16-2b64-40f6-9d49-edc1db59be41)
 
 # Create a Rule 'BoilerHourly' to toggle the boiler ON and OFF
 - This rule will run every full hour and turn the boiler ON or OFF based on the control point of that hour
