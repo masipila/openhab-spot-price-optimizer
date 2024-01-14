@@ -1,8 +1,8 @@
 # Usage example: Optimizing a boiler to heat domestic hot water on the cheapest hours
-This documenation page shows an example how to use the `openhab-spot-price-optimizer` to find cheapest hours of the day to heat the domestic hot water with a boiler.
+This documenation page gives an example how to use the `openhab-spot-price-optimizer` to find cheapest hours of the day to heat the domestic hot water.
 
 # Pre-requisites
-- The boiler can be controlled via openHAB, in other words there is an Item that can turn the boiler ON and OFF.
+- The boiler can be controlled with an openHAB Item.
   - [See example how to control boiler via openHAB](./Boiler-example.md)
 - Fetching of spot prices is working
   - [See example of how to fetch spot prices from Entso-E API](./Entso-E-example.md)
@@ -13,14 +13,16 @@ This documenation page shows an example how to use the `openhab-spot-price-optim
 - In order to optimize the heating of domestic hot water, our optimizing script needs to know how many hours the boiler needs to be ON to reach its thermostate max temperature.
 - We don't want to hard code this number to our script, so let's create an Item `BoilerHours` which we can easily update with an user interface widget.
 - [See example of a Control parameters page](./Control-parameters-UI-example.md)
-- WARNING: Do not try to optimize the heating of hot water too agressively. The temperature should never drop below XX celsius because legionella bacteria can reproduce in temperatures between 
+- WARNING: Do not try to optimize the heating of hot water too agressively.
+  - The boiler should always have enough hours to reach the thermostate max temperature.
+  - Legionella bacteria reproduces in temperatures between 20 - 45 ° celcius. In Finland, there is a law that the temperature of domestic hot water must never drop below 55 ° celcius to ensure that legionella bacteria will die.
   
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/fc0e1cdc-dc44-4dc5-a0b4-55c07342fd65)
 
-## Create an item 'BoilerControl' that defines the control points for the boiler
-- The script defined in the next chapter will find optimal time when the boiler should heat the domestic hot water
-- In order to visualize this result, create an Item called `BoilerControl` with a type Number
-- [See example of control point visualization chart](./Control-point-visualization.md)
+## Create an item 'BoilerControl'
+- The rule defined below will find optimal time when the boiler should heat the domestic hot water and write `BoilerControl` _control points_ to the Influx database.
+- The type of this Item must be Number
+- [See an example of control point visualization chart](./Control-point-visualization.md)
 
 ![image](boiler-control-item.png)
 
@@ -65,11 +67,12 @@ influx.writePoints('BoilerControl', points);
 
 The `GenericOptimizer` optimizing class provides has the following functions:
 - `allowHours(N)`: Finds N cheapest hours from the given spot prices and allows them.
-- `allowPeriods(N)`: Finds the cheapest consequtive N hour period from the given spot prices and allows them.
+- `allowPeriod(N)`: Finds the cheapest consequtive N hour period from the given spot prices and allows them.
 - `blocHours(N)`: Finds N most expensive hours from the given spot prices and blocks them.
 - `blockPeriod(N)`: Finds the most expensive consequtive N hour period from the given spot prices and blocks them.
 - `allowRemainingHours()`: Allows all remaining hours from the spot prices which have not been allowed or blocked yet.
 - `blockRemainingHours()`: Blocks all remaining hours from the spot prices which have not been allowed or blocked yet.
+- Note how the script above combines `allowPeriod` and `blockRemainingHours`.
 
 ## Invoke this Rule also after the spot prices have been fetched
 - The rule was defined to be run every time after the item `BoilerHours` changes. But what if this value is kept unchanged day after a day?
