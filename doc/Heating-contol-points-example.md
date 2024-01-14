@@ -6,7 +6,7 @@ The picture below illustrates how the heating of a house is optimized so that th
 For this reason, the `openhab-spot-price-optimizer` has also a second optimizer class, `PeakPeriodBlocker` which extends the basic capabilities provided by the `GenericOptimizer`. The idea of the PeakPeriodBlocker is to block the heating during the most expensive hours of the day, which are (at least in Finland) typically in the morning and in the evening.
 
 # Pre-requisites
-- The heating system can be controlled via openHAB Item.
+- The heating system can be controlled with an openHAB Item.
   - See example how to control a ground source heat pump via openHAB
 - Number of heating hours is determined and stored to an openHAB Item
   - See an example how to calculate the number of heating hours based on weather forecast
@@ -22,10 +22,10 @@ For this reason, the `openhab-spot-price-optimizer` has also a second optimizer 
   
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/fc0e1cdc-dc44-4dc5-a0b4-55c07342fd65)
 
-## Create an item 'HeatPumpCompressorControl' that defines the control points for the heat pump compressor
-- The script below will find optimal time when the heating should be on
-- In order to visualize this result, create an Item called `HeatPumpCompressorControl` with a type Number
-- [See example of control point visualization chart](./Control-point-visualization.md)
+## Create an item 'HeatPumpCompressorControl'
+- The script below will find optimal time when the heating should be on and write `HeatPumpCompressorControl` _control points_ to the Influx database.
+- The type of this Item must be Number.
+- [See an example of control point visualization chart](./Control-point-visualization.md)
 
 ![image](heat-pump-control-item.png)
 
