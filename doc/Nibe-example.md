@@ -31,9 +31,9 @@ Give a unique ID for the Thing. We use the `HeatPump` in this example. Remember 
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/1bd37222-4cd7-468e-892e-f88b644e1153)
 
-Create a Channel, configure it to use GPIO Digital Output and configure the GPIO Pin number that matches the relay that you will be using. The Waveshare relay board that I use have its GPIO pin numbers documented at [RPi Relay Board (B) - Waveshare Wiki](https://www.waveshare.com/wiki/RPi_Relay_Board_(B)). The GPIO Pin 5 matches to the first relay of the board.
+Create a Channel and give an identifier for it, we call it `Aux1` here because the relay will be connected to the Aux1 input of the heat pump. Configure it to use GPIO Digital Output and configure the GPIO Pin number that matches the relay that you will be using. The Waveshare relay board that is used in this example have its GPIO pin numbers documented at [RPi Relay Board (B) - Waveshare Wiki](https://www.waveshare.com/wiki/RPi_Relay_Board_(B)). The GPIO Pin 5 matches to the first relay of the board.
 
-![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/c539d388-365a-46a3-90eb-092e4d88490e)
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/146aef0c-d800-437a-9da1-7632a808aa79)
 
 Finally, add a link to a new Item to this Channel. Note that the name of the Item we use here is `HeatPumpCompressor`, it will be used in the Rules later on. The type of this Item is Switch as illustrated in the picture below. You can also add other metadata to the Item so that you can benefit from other nice openHAB UI features.
 
