@@ -1,4 +1,4 @@
-# Usage example: Optimizing a boiler to heat domestic hot water on the cheapest hours
+# GenericOptimizer usage example: Optimizing a boiler to heat domestic hot water on the cheapest hours
 This documenation page gives an example how to use the `GenericOptimizer` class of the `openhab-spot-price-optimizer` module to find cheapest hours of the day to heat the domestic hot water. As the name suggests, the optimization algorithms are generic and can be used for many different use cases. 
 
 **WARNING:** Do not try to optimize the heating of domestic hot water too agressively.
