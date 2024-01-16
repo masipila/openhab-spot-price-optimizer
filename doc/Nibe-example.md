@@ -1,14 +1,14 @@
-# Example: controlling a Nibe F1226 ground source heat pump using a relay via openHAB GPIO Binding
+# Controlling a Nibe F1226 ground source heat pump using a relay via openHAB GPIO Binding
 This page contains a step-by-step guide how a Nibe F1226 ground source heat pump can be controlled with openHAB using a relay. 
 
 The openhab-spot-price-optimizer scripts can be used with all kinds of devices, as long as you can control them using an openHAB Item. In other words, the usage of Raspberry Pi relay board and openHAB GPIO Binding is completely optional. You could also use for example smart relays like Shelly Pro series using the [Shelly Binding](https://www.openhab.org/addons/bindings/shelly/) or control your devices via a Binding to a cloud services like Mitsubishi MELCloud using the [MELCloud binding](https://www.openhab.org/addons/bindings/melcloud/).
 
-## Raspberry PI with a relay board
+# Raspberry PI with a relay board
 The picture below shows a Raspberry Pi which is connected to a relay board so that the relays can be controlled with Raspberry GPIO. The board in the picture is a [Waveshare relay board with 8 relays](https://www.waveshare.com/wiki/RPi_Relay_Board_(B)). This relay board can be mounted to a DIN-rail.
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/d039d219-a7a2-4dee-b751-9fdf326e21f0)
 
-## Nibe F1226 AUX inputs 
+# Nibe F1226 AUX inputs 
 Nibe F1226 ground source heat pump has two external AUX inputs which are shown in the picture below.
 - When pins 3-4 are connected, AUX1 is enabled.
 - When pins 5-6 are connected, AUX2 is enabled.
@@ -17,7 +17,7 @@ Nibe F1226 ground source heat pump has two external AUX inputs which are shown i
 - 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/8aef683f-4d5e-4aed-921b-1c6b05cf70ca)
 
-## Controlling the relays via openHAB GPIO Binding
+# Controlling the relays via openHAB GPIO Binding
 Warning: Do not have the physical cabling connected between the relays and your devices when you are experimenting and building the openHAB solution. The relays make a loud click when their state changes and there is also a green led indicating when the relay pulls so you can easily notice if your on/off state changes work.
 
 First install openHab [GPIO binding](https://www.openhab.org/addons/bindings/gpio/) from Settings - Bindings. 
