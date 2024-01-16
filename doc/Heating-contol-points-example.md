@@ -1,23 +1,24 @@
 # Usage example: Optimizing heating of the house
-This documenation page shows an example how to use the `openhab-spot-price-optimizer` to optimize the heating of a house.
+This documenation page gives an example how to use the `PeakPeriodBlocker` class of the `openhab-spot-price-optimizer` module to optimize the heating of a house.
 
 The picture below illustrates how the heating of a house is optimized so that the morning and evening spot price peaks are avoided. In order to optimize the heating of a house, you need to first know how much of heating is needed on a given temperature. However, optimizing the heating has also other objectives than just finding the cheapest hours of the day, because the house may cool down too much if there are too many hours without heating.
 
-For this reason, the `openhab-spot-price-optimizer` has also a second optimizer class, `PeakPeriodBlocker` which extends the basic capabilities provided by the `GenericOptimizer`. The idea of the PeakPeriodBlocker is to block the heating during the most expensive hours of the day, which are (at least in Finland) typically in the morning and in the evening.
+The `PeakPeriodBlocker` class extends the basic capabilities provided by the `GenericOptimizer`. The idea of the PeakPeriodBlocker is to block the most expensive peaks and allow the rest.
 
 # Pre-requisites
 - The heating system can be controlled with an openHAB Item.
-  - See example how to control a ground source heat pump via openHAB
+  - [See an example how to control a ground source heat pump via openHAB](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Nibe-example.md)
 - Number of heating hours is determined and stored to an openHAB Item
-  - See an example how to calculate the number of heating hours based on weather forecast
+  - TODO See an example how to calculate the number of heating hours based on weather forecast
 - Fetching of spot prices is working
-  - [See example of how to fetch spot prices from Entso-E API](./Entso-E-example.md)
+  - [See an example of how to fetch spot prices from Entso-E API](./Entso-E-example.md)
  
 # Create two new Items
 
 ## Create an Item 'HeatingHours'
 - In order to optimize the heating, our optimizing script needs to know how many hours the house needs to be heated.
 - We don't want to hard code this number to our script, so let's create an Item `HeatingHours` which we can easily update with an user interface widget or automatically based on a weather forecast.
+- TOOD: Link to weather forecast page
 - [See example of a Control parameters page](./Control-parameters-UI-example.md)
   
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/fc0e1cdc-dc44-4dc5-a0b4-55c07342fd65)
@@ -25,9 +26,9 @@ For this reason, the `openhab-spot-price-optimizer` has also a second optimizer 
 ## Create an item 'HeatPumpCompressorControl'
 - The script below will find optimal time when the heating should be on and write `HeatPumpCompressorControl` _control points_ to the Influx database.
 - The type of this Item must be Number.
-- [See an example of control point visualization chart](./Control-point-visualization.md)
+- [See an example of control point visualization chart that renders control points with spot prices](./Control-point-visualization.md)
 
-![image](heat-pump-control-item.png)
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/e178a888-bd5c-42f2-845c-db5503ec87ee)
 
 # Create a Rule 'HeatPumpCompressorControlOptimizer' to find an optimal schedule
 - This rule will create the _control points_ for each hour of the day
@@ -37,10 +38,10 @@ For this reason, the `openhab-spot-price-optimizer` has also a second optimizer 
 ## Inline script action for the rule
 - The following rule first reads the SpotPrice values from midnight to midnight
 - It then reads how many hours the heating needs to be ON from the `HeatingHours` item and calculates how many hours the heating can be OFF.
--- If for example 16 heating hours will be needed, then 8 hours can be blocked.
--- The number of blocked hours (8 in this example) is divided into two periods, 4 and 4 hours in this example.
+  - If for example 16 heating hours will be needed, then 8 hours can be blocked.
+  - The number of blocked hours (8 in this example) is divided into two periods, 4 and 4 hours in this example.
 - The algorithm searches the most expensive consecutive peak period (4 hours in this example) and blocks them with a control value 0.
--- The hours just before and after this peak period will be allowed with a control value 1.
+  - The hours just before and after this peak period will be allowed with a control value 1. This guarantees that the two blocked periods will not be right after each other.
 - The algorithm then searches the most expensive consecutive peak period (4 hours in this example) from those hours that do not yet have a block nor allow control point and blocks it.
 - After this, all remaining hours are allowed.
 - Finally, the control points will be saved to InfluxDB as `HeatPumpCompressorControl`.
