@@ -1,4 +1,4 @@
-# Usage example: Optimizing heating of the house
+# PeakPeriodBlocker usage example: Optimizing heating of the house
 This documenation page gives an example how to use the `PeakPeriodBlocker` class of the `openhab-spot-price-optimizer` module to optimize the heating of a house.
 
 The picture below illustrates how the heating of a house is optimized so that the morning and evening spot price peaks are avoided. In order to optimize the heating of a house, you need to first know how much of heating is needed on a given temperature. However, optimizing the heating has also other objectives than just finding the cheapest hours of the day, because the house may cool down too much if there are too many hours without heating.
