@@ -1,5 +1,5 @@
 # Example: controlling a Nibe F1226 ground source heat pump using a relay via openHAB GPIO Binding
-This chapter example explains step by step how a Nibe F1226 ground source heat pump can be controlled with a relay. 
+This page contains a step-by-step guide how a Nibe F1226 ground source heat pump can be controlled with openHAB using a relay. 
 
 The openhab-spot-price-optimizer scripts can be used with all kinds of devices, as long as you can control them using an openHAB Item. In other words, the usage of Raspberry Pi relay board and openHAB GPIO Binding is completely optional. You could also use for example smart relays like Shelly Pro series using the [Shelly Binding](https://www.openhab.org/addons/bindings/shelly/) or control your devices via a Binding to a cloud services like Mitsubishi MELCloud using the [MELCloud binding](https://www.openhab.org/addons/bindings/melcloud/).
 
@@ -39,7 +39,7 @@ Finally, add a link to a new Item to this Channel. Note that the name of the Ite
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/657ac4a9-d4c2-4eee-948c-83345fddfb34)
 
-You should now be able to toggle the relay 1 of your relay board on and off using the switch Item `HeatPumpCompressor` you just created. You can find this newly created Item in the Items menu. You can also create an openHAB _Page_ that contains this switch. If you hear loud clicks from the relay board and see the green led turning on/off, everything works as expected.
+You should now be able to toggle the relay 1 of your relay board on and off using the switch Item `HeatPumpCompressor` you just created. You can find this newly created Item in the Items menu. You can also create an openHAB _Page_ that contains this switch, for example the home page of your openHAB. If you hear loud clicks from the relay board and see the green led turning on/off, everything works as expected.
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/7c68da09-fa11-4e82-b29c-ad07568cef66)
 
