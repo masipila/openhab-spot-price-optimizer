@@ -56,7 +56,7 @@ Finally, add a link to a new Item to this Channel. Note that the name of the Ite
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/97e38359-8ff5-472f-99be-be5678836efb)
 
-You should now be able to toggle the relay 7 of your relay board on and off using the switch Item `BoilerPower` you just created. You can find this newly created Item in the Items menu. You can also add this switch Item to an openHAB _Page_. If you hear loud clicks from the relay board and see the green led turning on/off, everything works as expected.
+You should now be able to toggle the relay 7 of your relay board on and off using the switch Item `BoilerPower` you just created. You can find this newly created Item in the Items menu. You can also add this switch Item to an openHAB _Page_, for example the home page of your openHAB. If you hear loud clicks from the relay board and see the green led turning on/off, everything works as expected.
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/74a31962-c446-475a-959e-e9511bf816dd)
 
 Hint: If you installed openHabian SD image, you can use Frontail log viewer at port 9001 of your Raspberry using your web browser. You can see log entries when the state of your Item and Thing change. If you don't have Frontail to view the logs using a browser, you can always view the openHAB log files from the command line.
