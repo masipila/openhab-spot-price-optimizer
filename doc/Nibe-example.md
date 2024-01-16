@@ -14,7 +14,7 @@ Nibe F1226 ground source heat pump has two external AUX inputs which are shown i
 - When pins 5-6 are connected, AUX2 is enabled.
 - The meaning of AUX1 and AUX2 inputs can be configured in the menu of the Nibe heat pump. There is for example an option _block comperssor_ and _block hot water_. Note that these are only explained in the _Nibe installation manual_, not in the user guide document.
 - The AUX pins use a low voltage (3.3V) so you can test the Nibe side of things simply by using a short copper wire and connect pins 3 and 4 for AUX1 and pins 5-6 for AUX2. The relay will simply connect pins 3-4 (for AUX1) when the relay pulls or pins 5-6 (for AUX2) when the relay pulls.
-- 
+
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/8aef683f-4d5e-4aed-921b-1c6b05cf70ca)
 
 # Controlling the relays via openHAB GPIO Binding
