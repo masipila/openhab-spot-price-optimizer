@@ -5,14 +5,10 @@ class GenericOptimizer {
 
     /**
      * Constructor.
-     *
-     * @param prices
-     *   Array of spot prices as datetime-value pairs.
      */
-    constructor(prices) {
-	this.prices = prices;
-	console.debug('generic-optimizer.js: Spot prices');
-	console.debug(this.prices);
+    constructor() {
+	// Initialize this.prices with an empty array just in case.
+	this.prices = [];
     }
 
     /**
@@ -23,6 +19,8 @@ class GenericOptimizer {
      */
     setPrices(prices) {
 	this.prices = prices;
+	console.debug('generic-optimizer.js: Spot prices');
+	console.debug(this.prices);
     }
 
     /**
@@ -33,6 +31,18 @@ class GenericOptimizer {
      */
     allowHours(n) {
 	console.log('generic-optimizer.js: Searching for ' + n + ' cheapest hours...');
+
+	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
+	if (this.prices.length < 2) {
+	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	    return null;
+	}
+
+	// Early exit if not enough prices are available.
+	if (n > this.prices.length) {
+	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.prices.length + " hour");
+	    return null;
+	}
 
 	// Sort prices array by price
 	this.prices.sort((a, b) => (a.value > b.value) ? 1 : -1);
@@ -57,6 +67,18 @@ class GenericOptimizer {
      */
     blockHours(n) {
 	console.log('generic-optimizer.js: Searching for ' + n + ' most expensive hours...');
+
+	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
+	if (this.prices.length < 2) {
+	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	    return null;
+	}
+
+	// Early exit if not enough prices are available.
+	if (n > this.prices.length) {
+	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.prices.length + " hour");
+	    return null;
+	}
 
 	// Sort prices array by price.
 	this.prices.sort((a, b) => (a.value > b.value) ? -1 : 1);
@@ -84,6 +106,20 @@ class GenericOptimizer {
      *   Set to true to block the hours just before and after the period.
      */
     allowPeriod(n, blockSurrounding=false) {
+	console.log('generic-optimizer.js: Searching for the cheapest ' + n + ' hour period...');
+
+	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
+	if (this.prices.length < 2) {
+	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	    return null;
+	}
+
+	// Early exit if not enough prices are available.
+	if (n > this.prices.length) {
+	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.prices.length + " hour");
+	    return null;
+	}
+
 	// Ensure prices are sorted by datetime.
 	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
 
@@ -120,6 +156,20 @@ class GenericOptimizer {
      *   Set to true to allow the hours just before and after the period.
      */
     blockPeriod(n, allowSurrounding=false) {
+	console.log('generic-optimizer.js: Searching for the most expensive ' + n + ' hour period...');
+
+	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
+	if (this.prices.length < 2) {
+	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	    return null;
+	}
+
+	// Early exit if not enough prices are available.
+	if (n > this.prices.length) {
+	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.prices.length + " hour");
+	    return null;
+	}
+
 	// Ensure prices are sorted by datetime.
 	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
 
@@ -150,6 +200,13 @@ class GenericOptimizer {
      */
     allowRemainingHours() {
 	console.log("generic-optimizer.js: Allowing all remaining hours...");
+
+	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
+	if (this.prices.length < 2) {
+	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	    return null;
+	}
+
 	for (let i = 0; i < this.prices.length; i++) {
 	    if ("control" in this.prices[i] == false) {
 		this.prices[i]['control'] = 1;
@@ -163,6 +220,13 @@ class GenericOptimizer {
      */
     blockRemainingHours() {
 	console.log("generic-optimizer.js: Blocking all remaining hours...");
+
+	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
+	if (this.prices.length < 2) {
+	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	    return null;
+	}
+
 	for (let i = 0; i < this.prices.length; i++) {
 	    if ("control" in this.prices[i] == false) {
 		this.prices[i]['control'] = 0;
@@ -184,11 +248,10 @@ class GenericOptimizer {
      *   Index of the hour when the period starts.
      */
     findPeriodStart(n, findCheapest=true) {
-	if (findCheapest) {
-	    console.log('generic-optimizer.js: Searching for the cheapest ' + n + ' hour period...');
-	}
-	else {
-	    console.log('generic-optimizer.js: Searching for the most expensive ' + n + ' hour period...');
+	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
+	if (this.prices.length < 2) {
+	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	    return null;
 	}
 
 	let bestSum = 0;
@@ -246,10 +309,17 @@ class GenericOptimizer {
      * so that we remove the current values (spot prices) and renames the 'control' elements as 'values'.
      */
     getControlPoints() {
+	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
+	if (this.prices.length < 2) {
+	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	    return null;
+	}
+
 	for (let i = 0; i < this.prices.length; i++) {
 	    this.prices[i]['value'] = this.prices[i]['control'];
 	    delete this.prices[i]['control'];
 	}
+
 	return this.prices;
     }
 }
