@@ -5,11 +5,11 @@ openHAB Spot Price Optimizer helps you to optimize energy consumption to the che
 
 Spot priced electricity contract means that the price of electricity is different for every hour of the day. The day-ahead prices are published at around 13.15 CET/CEST on the [Entso-E Transparency Platform](https://transparency.entsoe.eu).
 
-This solution helps to automatically schedule the consumption of electricity to the cheapest hours of the next day. The solution can be applied for a variety of devices that you can contorl via openHAB, including heating of your house, heating the domestic hot water with a water boiler, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to run. The picutre below illustrate two use cases: charging an electric vehicle in the night and heating of a house.
+This solution helps to automatically schedule the consumption of electricity to the cheapest hours of the next day. The solution can be applied for a variety of devices that you can contorl via openHAB, including heating of your house, heating the domestic hot water with a water boiler, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to be ON or OFF (or have its other kind of state changed). The picutre below illustrate two use cases: heating the domestic hot water (red bars) in the night and heating of a house (yellow bars).
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/043716c0-a6f0-4c05-aa53-2bb20321b22c)
 
-The blue area represents the hourly prices of electricity. The red bars are the _control points_ for charging the car during the two cheapest hours of the night. The yellow bars are the _control points_ when the compressor of a ground source heat pump is allowed to run. On this example day, 12 hours of heating is distributed so that the morning and evening peak hours are avoided.
+The blue area represents the hourly prices of electricity. The red bars are the _control points_ for heating the domestic hot water in a boiler during the two cheapest hours of the night. The yellow bars are the _control points_ when the compressor of a ground source heat pump is allowed to run. On this example day, 12 hours of heating is distributed so that the morning and evening price peaks are avoided.
 
 # How to control your devices via openHAB
 The openhab-spot-price-optimizer scripts can be used with all kinds of devices, as long as you can control them using openHAB.
@@ -33,6 +33,8 @@ If your device in not connected online or there is no binding available to contr
   - Create an influxDB user, organization and a bucket (database is called a bucket in InfluxDB 2.x) and ensure you have a token with read and write permissions to your bucket.
   - It is recommended to run the InfluxDB on some other server than a Raspberry Pi because the write operations might eventually wear the SD card until it corrupts.
 - JSScripting addon must be installed in openHAB settings. The rules are written as ECMAScript 262 Edition 11. Note the version 11. openHAB 4.x ships with JSScripting so you don't need to install this separately.
+- XSLT Transformation addon must be installed in openHAB settings
+- JSONPath Transformation addon must be installed in openHAB settings.
 - InfluxDB Persistence addon must be installed in openHAB settings
 - InfluxDB is configured as the default persistence service in openHAB settings.
 - [Download xml2json.xsl](https://www.bjelic.net/2012/08/01/coding/convert-xml-to-json-using-xslt/) and save it as `openhab/conf/transform/xml2json.xsl` . Ensure that the openhab user has read access to this file. 
