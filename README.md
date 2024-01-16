@@ -70,3 +70,5 @@ The spot prices are read from the Entso-E Transparency Platform API.
 
 ## Usage examples
 - [Fetch spot prices from Entso-E API and save them to InfluxDB](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Entso-E-example.md)
+- [GenericOptimizer usage example: Calculate control points for a boiler to heat domestic hot water](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Boiler-control-points-example.md)
+- [PeakPeriodBlocker usage example: Calculate control points for a heating a house](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Heating-contol-points-example.md)
