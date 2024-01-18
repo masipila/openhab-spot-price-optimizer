@@ -87,7 +87,7 @@ midHeatingHours = Math.round(midItem.state);
 optimizer.blockPeaks(heatingHours, midHeatingHours);
 optimizer.allowRemainingHours();
 points = optimizer.getControlPoints();
-influx.writePoints('nibe_control', points);
+influx.writePoints('HeatPumpCompressorControl', points);
 ```
 
 ## Invoke this Rule also after the spot prices have been fetched
