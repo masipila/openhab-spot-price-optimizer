@@ -102,10 +102,10 @@ class GenericOptimizer {
      *   Index of the hour when the period starts.
      * @param int n
      *   Duration of the period to be allowed.
-     * @param bool blockSurrounding
-     *   Set to true to block the hours just before and after the period.
+     * @param int surroundingHours
+     *   Number of hours to be blocked just before and after the allowed period.
      */
-    allowPeriod(n, blockSurrounding=false) {
+    allowPeriod(n, surroundingHours=0) {
 	console.log('generic-optimizer.js: Searching for the cheapest ' + n + ' hour period...');
 
 	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
@@ -126,9 +126,14 @@ class GenericOptimizer {
 	// Find the index when the period starts.
 	let startIndex = this.findPeriodStart(n, true);
 
-	// Block the previous hour unless we are at the start of the pricing window.
-	if (blockSurrounding && startIndex > 0) {
-	    this.prices[startIndex-1]['control'] = 0;
+	// Block the previous hours if they are available in the prices array.
+	if (surroundingHours) {
+	    for (let i = 1; i <= surroundingHours; i++) {
+		let j = startIndex - i;
+		if (j in this.prices) {
+		    this.prices[j]['control'] = 0;
+		}
+	    }
 	}
 
 	// Allow the hours of the period.
@@ -136,9 +141,14 @@ class GenericOptimizer {
 	    this.prices[i]['control'] = 1;
 	}
 
-	// Block the next hour after the period unless we are at the end of the pricing window.
-	if (blockSurrounding && (startIndex + n < this.prices.length)) {
-	    this.prices[startIndex+n]['control'] = 0;
+	// Block the next hours if they are available in the prices array.
+	if (surroundingHours) {
+	    for (let i = 0; i < surroundingHours; i++) {
+		let j = startIndex + n + i;
+		if (j in this.prices) {
+		    this.prices[j]['control'] = 0;
+		}
+	    }
 	}
 
 	console.debug('generic-optimizer.js: Spot prices and control values');
@@ -152,10 +162,10 @@ class GenericOptimizer {
      *   Index of the hour when the period starts.
      * @param int n
      *   Duration of the period to be blocked.
-     * @param bool allowSurrounding
-     *   Set to true to allow the hours just before and after the period.
+     * @param int surroundingHours
+     *   Number of hours to be allowed just before and after the blocked period.
      */
-    blockPeriod(n, allowSurrounding=false) {
+    blockPeriod(n, surroundingHours=0) {
 	console.log('generic-optimizer.js: Searching for the most expensive ' + n + ' hour period...');
 
 	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
@@ -176,9 +186,14 @@ class GenericOptimizer {
 	// Find the index when the period starts.
 	let startIndex = this.findPeriodStart(n, false);
 
-	// Allow the previous hour unless we are at the beginning of the pricing window.
-	if (allowSurrounding && startIndex > 0) {
-	    this.prices[startIndex-1]['control'] = 1;
+	// Allow the previous hours if they are available in the prices array.
+	if (surroundingHours) {
+	    for (let i = 1; i <= surroundingHours; i++) {
+		let j = startIndex - i;
+		if (j in this.prices) {
+		    this.prices[j]['control'] = 1;
+		}
+	    }
 	}
 
 	// Block the hours of the period.
@@ -186,9 +201,14 @@ class GenericOptimizer {
 	    this.prices[i]['control'] = 0;
 	}
 
-	// Allow the next hour after the period unless we are at the end of the pricing window.
-	if (allowSurrounding && (startIndex + n < this.prices.length)) {
-	    this.prices[startIndex+n]['control'] = 1;
+	// Allow the next hours if they are available in the prices array.
+	if (surroundingHours) {
+	    for (let i = 0; i < surroundingHours; i++) {
+		let j = startIndex + n + i;
+		if (j in this.prices) {
+		    this.prices[j]['control'] = 1;
+		}
+	    }
 	}
 
 	console.debug('generic-optimizer.js: Spot prices and control values');
