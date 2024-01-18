@@ -5,10 +5,10 @@ This documenation page gives an example how to use the `PeakPeriodOptimizer` cla
 
 The picture above illustrates how the heating of a house is optimized so that the morning and evening spot price peaks are avoided. In order to optimize the heating of a house, we first tell the optimizing algorithm how many heating hours are needed. The 14 green bars in the picture above represent the hours when heating is allowed to be ON.
 
-Optimizing the heating has also other objectives than just finding the cheapest hours of the day because the house may cool down too much if there are too many hours without heating. The idea of the `PeakPeriodOptimizer` optimizing algorithm is to block the most expensive price peaks and allow the rest. In the example above:
+Optimizing the heating has also other objectives than just finding the cheapest hours of the day because the house may cool down too much if there are too many hours without heating. The idea of the `PeakPeriodOptimizer` algorithm is to block the most expensive price peaks and allow the rest. In the example above:
 - 14 hours of heating is needed
 - That means that 24 - 14 = 10 hours can be blocked
-- The 10 hours is divided into two periods, 5 hours each.
+- The 10 hours are divided into two periods, 5 hours each.
 - The algorithm searches two most expensive 5 hours price peaks and blocks them.
 
 The minimum number of hours between the two block periods is configurable.
@@ -23,16 +23,16 @@ The minimum number of hours between the two block periods is configurable.
 
 ## Create an Item 'HeatingHours'
 - In order to optimize the heating, our optimizing script needs to know how many hours the house needs to be heated. In the example above, there are 14 heating hours.
-- We don't want to hard code this number to our script, so let's create an Item `HeatingHours` which can easily be updated with an user interface widget or automatically based on a weather forecast.
+- We don't want to hard code this number to our script, so let's create an Item `HeatingHours` which can easily be updated with an user interface widget or automatically with a separate Rule.
+- See a separate documentation page which shows how this Item can be updated based on the forecasted temperature. 
 - The type of this Item must be Number.
-- TOOD: Link to weather forecast page
 - [See example of a Control parameters page](./Control-parameters-UI-example.md)
   
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/84e5801f-b7df-492b-855e-37d18ef2e41b)
 
 ## Create an Item 'MidHeatingHours'
 - In the example above, there are three heating hours between the two 5 hour blocks
-- The algorithm can _guarantee_ a certain amount of heating hours between the two blocked price peaks. This minimum amount of hours between the two price peaks is called `MidHeatingHours`. We don't want to hard code this number to our script so let's also create an Item `MidHeatingHours` which can easily be updated with an user interface widget or automatically based on weather forecast.
+- The algorithm can _guarantee_ a certain amount of heating hours between the two blocked price peaks. This minimum amount of hours between the two price peaks is called `MidHeatingHours`. We don't want to hard code this number to our script so let's also create an Item `MidHeatingHours` which can easily be updated with an user interface widget or automatically with a separate Rule.
 - The type of this Item must be Number.
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/c5b64786-284d-4f17-a741-4f141ff5b1e2)
@@ -95,7 +95,7 @@ influx.writePoints('HeatPumpCompressorControl', points);
 - The solution is to modify the previously created `FetchSpotPrices` Rule so that we execute the `HeatPumpCompressorOptimizer` Rule as an additional action immediately after the spot prices have been fetched.
 - Go to edit the previously created `FetchSpotPrices` Rule and add the action as illustrated in the picture below.
 
-- TODO
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/0673a039-5f15-4eac-9864-fa7904ea5b40)
 
 # Create a Rule 'HeatPumpCompressorHourly' to toggle the compressor ON and OFF
 - This rule will run every full hour and turn the compressor ON or OFF based on the control point of that hour
