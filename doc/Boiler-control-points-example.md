@@ -29,10 +29,14 @@ This documenation page gives an example how to use the `GenericOptimizer` class 
 
 ![BoilerControlItem](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/5d03b59d-d124-4121-99a9-16d05696b4d8)
 
-# Create a Rule 'BoilerControlOptimizer' to find an optimal schedule
+# Create a Rule 'BoilerOptimizer' to calculate the control points
 - This rule will create the _control points_ for each hour of the day
 - Control point value 1 means the power supply will be ON during that hour and value 0 means that power supply will be OFF during that hour.
-- This Rule will be triggered whenever the Item `BoilerHours` changes. We will also invoke this Rule right after the spot prices have been fetched.
+- This Rule will be triggered whenever the Item `BoilerHours` changes.
+- We will also modify the `FetchSpotPrices` rule so that this Rule will be invoked right after the spot prices have been fetched, see below.
+
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/54faa316-2981-4112-b7bf-9f1a3a91e4d5)
+
 
 ## Inline script action for the rule
 - The following rule first reads the SpotPrice values from midnight to midnight
@@ -80,8 +84,8 @@ The `GenericOptimizer` optimizing class provides has the following functions:
 
 ## Invoke this Rule also after the spot prices have been fetched
 - The rule was defined to be run every time after the item `BoilerHours` changes. But what if this value is kept unchanged day after a day?
-- The solution is to modify the previously created `FetchSpotPrices` Rule so that we execute the `BoilerControlOptimizer` rule as an additional action immeidately after the spot prices have been fetched.
-- Go to edit the previously created `FetchSpotPrices` Rule and add the action as illustrated in the picture below.
+- The solution is to modify the previously created `FetchSpotPrices` Rule so that we execute the `BoilerOptimizer` rule as an additional action immeidately after the spot prices have been fetched.
+- Go to edit the previously created `FetchSpotPrices` Rule and add the additional action as illustrated in the picture below.
 
 ![fetch-spot-price-execute-boiler-optimization](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/3a296b16-2b64-40f6-9d49-edc1db59be41)
 
