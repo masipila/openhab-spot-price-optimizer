@@ -1,11 +1,11 @@
-# PeakPeriodBlocker usage example: Optimizing heating of the house
-This documenation page gives an example how to use the `PeakPeriodBlocker` class of the `openhab-spot-price-optimizer` to optimize the heating of a house.
+# PeakPeriodOptimizer usage example: Optimizing heating of the house
+This documenation page gives an example how to use the `PeakPeriodOptimizer` class of the `openhab-spot-price-optimizer` to optimize the heating of a house.
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/3538f84b-c09b-432d-a22a-d2208a882c68)
 
 The picture above illustrates how the heating of a house is optimized so that the morning and evening spot price peaks are avoided. In order to optimize the heating of a house, we first tell the optimizing algorithm how many heating hours are needed. The 14 green bars in the picture above represent the hours when heating is allowed to be ON.
 
-Optimizing the heating has also other objectives than just finding the cheapest hours of the day because the house may cool down too much if there are too many hours without heating. The idea of the `PeakPeriodBlocker` optimizing algorithm is to block the most expensive price peaks and allow the rest. In the example above:
+Optimizing the heating has also other objectives than just finding the cheapest hours of the day because the house may cool down too much if there are too many hours without heating. The idea of the `PeakPeriodOptimizer` optimizing algorithm is to block the most expensive price peaks and allow the rest. In the example above:
 - 14 hours of heating is needed
 - That means that 24 - 14 = 10 hours can be blocked
 - The 10 hours is divided into two periods, 5 hours each.
