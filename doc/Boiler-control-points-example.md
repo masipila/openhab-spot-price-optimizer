@@ -37,7 +37,6 @@ This documenation page gives an example how to use the `GenericOptimizer` class 
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/54faa316-2981-4112-b7bf-9f1a3a91e4d5)
 
-
 ## Inline script action for the rule
 - The following rule first reads the SpotPrice values from midnight to midnight
 - It then reads how many hours the boiler needs to be ON from the `BoilerHours` item
@@ -92,6 +91,8 @@ The `GenericOptimizer` optimizing class provides has the following functions:
 # Create a Rule 'BoilerHourly' to toggle the boiler ON and OFF
 - This rule will run every full hour and turn the boiler ON or OFF based on the control point of that hour
 - If the boiler is currently OFF and the control point for the new hour is 1, the boiler will be turned ON and vice versa.
+
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/bfbe2dc8-4d6f-4d34-b4de-a4866453c645)
 
 ## Inline script action for the rule
 ```Javascript
