@@ -7,9 +7,9 @@ Spot priced electricity contract means that the price of electricity is differen
 
 This solution helps to automatically schedule the consumption of electricity to the cheapest hours of the next day. The solution can be applied for a variety of devices that you can contorl via openHAB, including heating of your house, heating the domestic hot water with a water boiler, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to be ON or OFF (or have its other kind of state changed). The picutre below illustrate two use cases: heating the domestic hot water (red bars) in the night and heating of a house (yellow bars).
 
-![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/043716c0-a6f0-4c05-aa53-2bb20321b22c)
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/001cbab8-7391-46e7-ad70-42e4216264c6)
 
-The blue area represents the hourly prices of electricity. The red bars are the _control points_ for heating the domestic hot water in a boiler during the two cheapest hours of the night. The yellow bars are the _control points_ when the compressor of a ground source heat pump is allowed to run. On this example day, 12 hours of heating is distributed so that the morning and evening price peaks are avoided.
+The blue area represents the hourly prices of electricity. The yellow bars are the _control points_ for heating the domestic hot water in a boiler during the two cheapest hours of the night. The green bars are the _control points_ when the compressor of a ground source heat pump is allowed to run and heat the house. On this example day, 14 hours of heating is distributed so that the morning and evening price peaks are avoided.
 
 # How to control your devices via openHAB
 The openhab-spot-price-optimizer scripts can be used with all kinds of devices, as long as you can control them using openHAB.
