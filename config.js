@@ -6,7 +6,7 @@ var config = {
     influx: {
 	baseUrl: 'http://address-of-your-server:8086/api/v2/',
 	org: 'openhab',
-	bucket: 'openhab',
+	bucket: 'autogen',
 	token: 'insert-your-token-here'
     },
     // Insert your bidding zone and API token here.
