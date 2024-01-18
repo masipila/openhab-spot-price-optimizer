@@ -23,7 +23,7 @@ Entso-E publishes the spot prices for next day in the afternoon. date-helper.js 
 Note: If you make changes to the javascript files (inluding config.js), you must re-save the Script Action (the code snippet below) to make sure openHAB re-reads the javascript files.
 
 Run the Rule manually and check from your influxDB data explorer that you can see the spot prices for today / tomorrow (depending on the time of the day when you executed the script). If you run the rule in the afternoon or evening, the script will fetch tomorrow's spot prices. Remember to choose a date range in Influx data explorer which includes the day you just fetched the prices for.
-- If you’re not able to see the `SpotPrice` measurement data in your influxDB Data Explorer, increase the openHAB log level to see the debug level logs from openHAB logs.
+- If you’re not able to see the `SpotPrice` measurement data in your influxDB Data Explorer, increase the openHAB log level to see the debug level logs.
 
 ## Inline script action for fetching the spot prices
 
