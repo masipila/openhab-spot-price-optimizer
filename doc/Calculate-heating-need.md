@@ -13,6 +13,8 @@ This documentation page gives an example how the `HeatingHours` Item can be auto
 - Schedule this Rule to be triggered in the afternoon
 - The rule will update the `HeatingHours` item.
 
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/eeadee1e-2db8-460c-bd56-bb0117b9da3e)
+
 ## Inline script action for the rule
 ```Javascript
 // Load modules. Database connection parameters must be defined in config.js.
@@ -49,3 +51,9 @@ if (hours != null) {
   item.sendCommand(hours);
 }
 ```
+# Notes
+Every house is different and requires different amount of heating on different temperatures. The `HeatingCalculator` class uses a linear curve to calculate the number of heating hours on different temperatures. You can experiment how the curve looks like with different parameters for example at https://www.omnicalculator.com/math/line-equation-from-two-points (use temperature as the X parameter and hours as the Y parameter).
+
+The example script above reads the `FMIForecastTemperature` from the database and calculates the average temperature from that. If your house is on a windy place you might want to use the wind chill compensated temperature ("feels like" temperature) instead of the temperature. [FMI example](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/FMI-example.md) has an example how to calculate and save `FMIForecastWindChillTemp`.
+
+The end of the script above includes a temperature drop compensation which adds more heating hours if there is a big drop in the temperature during the day. If there is a temperature drop of N degres, N/2 heating hours will be returned as a compensation, rounded up. If you don't want to include this compensation in your calculations, remove the corresponding line from the inline script.
