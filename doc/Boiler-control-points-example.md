@@ -27,7 +27,7 @@ This documenation page gives an example how to use the `GenericOptimizer` class 
 - The type of this Item must be Number
 - [See an example of control point visualization chart](./Control-point-visualization.md)
 
-![BoilerControlItem](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/5d03b59d-d124-4121-99a9-16d05696b4d8)
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/7cecdf15-0978-456e-bf7d-d274fc271f30)
 
 # Create a Rule 'BoilerOptimizer' to calculate the control points
 - This rule will create the _control points_ for each hour of the day
