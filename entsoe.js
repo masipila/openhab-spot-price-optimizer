@@ -26,6 +26,12 @@ class Entsoe {
      *   Array of point objects.
      */
     getSpotPrices(start, end, tax) {
+	// Early exit if API token has not been configured in config.js
+	if (this.config.entsoe.token == 'insert-your-token-here') {
+	    console.error("entsoe.js: Entso-E API token not configured in config.js!");
+	    return null;
+	}
+
 	const priceXml = this.makeApiCall(start, end);
 	const points = this.preparePoints(priceXml, tax);
 	return points;
@@ -84,8 +90,7 @@ class Entsoe {
 	    prices = JSON.parse(transformation.transform('XSLT', 'xml2json.xsl', priceXml));
 	}
 	catch (exception) {
-	    console.error('entsoe.js: Error while transforming XML to JSON!');
-	    console.error(priceXml);
+	    console.error('entsoe.js: Error while transforming XML to JSON! Is xml2json.xsl present?');
 	}
     
 	// API returns an Acknowledgement_MarketDocument when prices are not available.
@@ -108,7 +113,7 @@ class Entsoe {
 		console.log("entsoe.js: Received time series for " + days + " days.");
 		for (let i = 0; i < days; i++) {
 		    let startUtc = prices['Publication_MarketDocument']['TimeSeries'][i]['Period']['timeInterval']['start'];
-		    console.debug(startUtc);
+		    console.debug("entsoe.js: start: " + startUtc);
 		    let points = prices['Publication_MarketDocument']['TimeSeries'][i]['Period']['Point'];
 		    let n = Object.keys(points).length
 

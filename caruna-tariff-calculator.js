@@ -91,6 +91,12 @@ class CarunaTariffCalculator {
      *   Array of datetime-value pairs representing total electricity prices.
      */
     getTotalPrices(spotPrices, price1, price2, tax) {
+	// Early exit if prices are not available.
+	if (!spotPrices || spotPrices.length < 1) {
+	    console.error("caruna-tariff-calculator.js: No spot prices available, aborting total price calculation!");
+	    return null;
+	}
+
 	let points = [];
 	const n = Object.keys(spotPrices).length;
 	for (let i = 0; i < n; i++) {

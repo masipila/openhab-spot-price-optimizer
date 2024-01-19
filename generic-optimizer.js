@@ -20,7 +20,7 @@ class GenericOptimizer {
     setPrices(prices) {
 	this.prices = prices;
 	console.debug('generic-optimizer.js: Spot prices');
-	console.debug(this.prices);
+	console.debug(JSON.stringify(this.prices));
     }
 
     /**
@@ -56,7 +56,7 @@ class GenericOptimizer {
 	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
 
 	console.debug('generic-optimizer.js: Spot prices and control values');
-	console.debug(this.prices);
+	console.debug(JSON.stringify(this.prices));
     }
 
     /**
@@ -92,7 +92,7 @@ class GenericOptimizer {
 	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
 
 	console.debug('generic-optimizer.js: Spot prices and control values');
-	console.debug(this.prices);
+	console.debug(JSON.stringify(this.prices));
     }
 
     /**
@@ -152,7 +152,7 @@ class GenericOptimizer {
 	}
 
 	console.debug('generic-optimizer.js: Spot prices and control values');
-	console.debug(this.prices);
+	console.debug(JSON.stringify(this.prices));
     }
 
     /**
@@ -212,7 +212,7 @@ class GenericOptimizer {
 	}
 
 	console.debug('generic-optimizer.js: Spot prices and control values');
-	console.debug(this.prices);
+	console.debug(JSON.stringify(this.prices));
     }
 
     /**
@@ -232,7 +232,7 @@ class GenericOptimizer {
 		this.prices[i]['control'] = 1;
 	    }
 	}
-	console.debug(this.prices);
+	console.debug(JSON.stringify(this.prices));
     }
 
     /**
@@ -252,7 +252,7 @@ class GenericOptimizer {
 		this.prices[i]['control'] = 0;
 	    }
 	}
-	console.debug(this.prices);
+	console.debug(JSON.stringify(this.prices));
     }
 
     /**

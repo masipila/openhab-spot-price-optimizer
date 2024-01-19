@@ -22,17 +22,18 @@ class Influx {
      *   Returns 1 or 0. If no control is found, defaults to 1.
      */
     getCurrentControl(measurement, start) {
-	console.log('influx.js: Getting current value for ' + measurement + '...');
+	console.log('influx.js: Getting the current control value for ' + measurement + '...');
+
 	let stop = new Date(start.getTime());
 	stop.setHours(stop.getHours() + 1);
 	let points = this.getPoints(measurement, start, stop);
-	if (points.length) {
+	if (points && points.length) {
 	    const control = points[0].value;
-	    console.log('influx.js: Current value for ' + measurement + ': ' + control);
+	    console.log('influx.js: Current control for ' + measurement + ': ' + control);
 	    return control;
 	}
 	else {
-	    console.log('influx.js: Current value not found for ' + measurement + ', defaulting to 1!');
+	    console.error('influx.js: Current control not found for ' + measurement + ', defaulting to 1!');
 	    return 1;
 	}
     }
@@ -51,6 +52,12 @@ class Influx {
      *   Array of datetime-value pairs for given measurement.
      */
     getPoints(measurement, start, stop) {
+	// Early exit if connection parameters have not been configured in config.js
+	if (this.config.influx.token == 'insert-your-token-here') {
+	    console.error("influx.js: Influx API token not configured in config.js!");
+	    return null;
+	}
+
 	const http = Java.type("org.openhab.core.model.script.actions.HTTP");
 	const url = this.config.influx.baseUrl + 'query?' + 'org=' + this.config.influx.org + '&bucket=' + this.config.influx.bucket;
 	console.debug('influx.js: URL:' + url);
@@ -60,7 +67,8 @@ class Influx {
 	};
 	const fluxQuery = 'from(bucket: \"' + this.config.influx.bucket + '\") ' +
               '|> range(start: ' + start.toISOString() + ', stop: ' + stop.toISOString() + ') ' +
-              '|> filter(fn: (r) => r[\"_measurement\"] == \"' + measurement + '\")';
+              '|> filter(fn: (r) => r[\"_measurement\"] == \"' + measurement + '\") ' +
+              '|> filter(fn: (r) => not exists r["item"])';
 	console.debug('influx.js: ' + fluxQuery);
 	let response = '';
 	try {
@@ -120,6 +128,18 @@ class Influx {
      * @return bool
      */
     writePoints(measurement, points) {
+	// Early exit if connection parameters have not been configured in config.js
+	if (this.config.influx.token == 'insert-your-token-here') {
+	    console.error("influx.js: Influx API token not configured in config.js!");
+	    return false;
+	}
+
+	// Early exit if points are null
+	if (points == null) {
+	    console.error("influx.js: Unable to write points for measurement " + measurement + ", empty points received as input!");
+	    return false;
+	}
+
 	const n = Object.keys(points).length;
 	console.log('influx.js: Preparing to write ' + n + ' points to the database for ' + measurement);
 	const http = Java.type("org.openhab.core.model.script.actions.HTTP");
@@ -136,7 +156,13 @@ class Influx {
 		let timestamp = new Date(datetime).getTime();
 		let data = measurement + ' value=' + value + ' ' + timestamp;
 		//console.debug('influx.js: ' + data);
-		http.sendHttpPostRequest(url, 'application/json', data, headers, 5000);
+		try {
+		    http.sendHttpPostRequest(url, 'application/json', data, headers, 5000);
+		}
+		catch (exception) {
+		    console.error('influx.js: Post request to Influx DB HTTP API failed!');
+		    console.error(exception.message);
+		}
 	    }
 	    response = true;
 	    console.log('influx.js: Points successfully saved for measurement ' + measurement);
@@ -158,6 +184,12 @@ class Influx {
      *   Stop datetime of the range in ISO8601 format, e.g. 2022-06-28T00:00:00.000Z
      */
     deletePoints(measurement, start, stop) {
+	// Early exit if connection parameters have not been configured in config.js
+	if (this.config.influx.token == 'insert-your-token-here') {
+	    console.error("influx.js: Influx API token not configured in config.js!");
+	    return null;
+	}
+
 	const http = Java.type("org.openhab.core.model.script.actions.HTTP");
 	const url = this.config.influx.baseUrl + 'delete?' + 'org=' + this.config.influx.org + '&bucket=' + this.config.influx.bucket;
 	const headers = {
