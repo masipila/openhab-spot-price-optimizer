@@ -10,6 +10,7 @@
   - [Usage examples](#usage-examples)
   - [User interface examples](#user-interface-examples)
 - [About the author](#about-the-author)
+- [Community and support](#community-and-support)
 
 # Introduction
 openHAB Spot Price Optimizer helps you to optimize energy consumption to the cheapest hours of the day using openHAB home automation system.
