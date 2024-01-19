@@ -9,6 +9,8 @@
   - [Install openhab-spot-price-optimizer scripts](#install-openhab-spot-price-optimizer-scripts)
   - [Usage examples](#usage-examples)
   - [User interface examples](#user-interface-examples)
+  - [Failsafe considerations](#failsafe-considerations)
+  - [Remote access](#remote-access)
 - [About the author](#about-the-author)
 - [Community and support](#community-and-support)
 
@@ -93,6 +95,12 @@ The spot prices are read from the Entso-E Transparency Platform API.
 - [Home page displaying current states of the devices](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/UI-current-states.md)
 - [Chart visualizing spot prices and control points](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/UI-chart-example.md)
 - [Page containing widgets to update control parameters](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/UI-control-parameters.md)
+
+## Failsafe considerations
+When controlling real-world devices, it is more than healthy to consider what can go wrong and what happens when (not if) that happens. [Read more on failsafe considerations](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Failsafe-considerations.md).
+
+## Remote access
+If you run openHAB at your home network, it's quite nice to to be able to access it remotely with mobile phone. Exposing your openHAB directly to public internet is a Bad Idea (TM) as it will be under continuous attacks in no time (it's probably a question of minutes, max hours, not days after you expose it to public internet). To securely use your openHAB remotely, I can warmly recommend using [Tailscale VPN](https://tailscale.com/), which is free for personal use and super simple to install.  
 
 # About the author
 openhab-spot-price-optimizer is developed by [Markus Sipilä](https://fi.linkedin.com/in/markussipila). Publishing this solution as open source is my small contribution to fight the climate crisis. As the share of wind and solar power increase, the importance of demand response becomes increasingly important. Demand response means shifting demand of electricity to times when there is plenty of electricity available or when the other demand is lower. openhab-spot-price-optimizer helps normal households to do exactly this and save money while saving the planet.
