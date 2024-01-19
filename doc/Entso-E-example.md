@@ -22,9 +22,6 @@ Entso-E publishes the spot prices for next day in the afternoon. date-helper.js 
 
 Note: If you make changes to the javascript files (inluding config.js), you must re-save the Script Action (the code snippet below) to make sure openHAB re-reads the javascript files.
 
-Run the Rule manually and check from your influxDB data explorer that you can see the spot prices for today / tomorrow (depending on the time of the day when you executed the script). If you run the rule in the afternoon or evening, the script will fetch tomorrow's spot prices. Remember to choose a date range in Influx data explorer which includes the day you just fetched the prices for.
-- If you’re not able to see the `SpotPrice` measurement data in your influxDB Data Explorer, increase the openHAB log level to see the debug level logs.
-
 ## Inline script action for fetching the spot prices
 
 ```Javascript
@@ -68,16 +65,21 @@ influx.writePoints('TotalPrice', totalPrices);
 ```
 
 ## Validate the results by checking the data in Influx Data Explorer
-Once you have run the Rule, check the results from Influx Data Explorer. You should now see a measurement `SpotPrice`. Remember to adjust the date range filter to a custom range so that you have data for that time range.
+Run the Rule manually and check from your InfluxDB Data Explorer that you can see the spot prices for today / tomorrow (depending on the time of the day when you executed the script). If you run the rule in the afternoon or evening, the script will fetch tomorrow's spot prices. Remember to choose a date range in Influx data explorer which includes the day you just fetched the prices for.
+
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/fd1e22cf-bb19-4316-a233-f8fd36a3610c)
 
 If you do not see the SpotPrice data in Influx Data Explorer:
 - check the openHAB logs
 - double check that you have configured `config.js` correctly
-- double check that you have followed the pre-requisite instructions from the main README file 
+- double check that you have followed the pre-requisite instructions from the main README file
 
-# Create a Rule UpdateSpotPriceItem
-If you want to render the current spot price in the openHAB user interface, you need to create a Rule that runs every full hour. The Script Action reads the spot price for the current hour from the database and updates the value of the SpotPrice item so that openHAB knows about the changed price. This is needed because we saved the spot prices to the Influx DB bypassing the openHAB persitence layers.
+If the logs do not reveal the reason, [increase the openHAB log level to DEBUG](https://www.openhab.org/docs/administration/logging.html). The log level can be modified using [openHAB console](https://www.openhab.org/docs/administration/console.html) with a command `log:set DEBUG org.openhab.automation.script.ui.FetchSpotPrices`. Once you've done with debugging, it is recommended to return the log level to INFO to avoid polluting your logs with debug level information. 
+
+# Optional: Create a Rule UpdateSpotPriceItem
+If you want to render the current spot price in the openHAB user interface, you need to create a Rule that runs every full hour. The Script Action needs to read the spot price for the current hour from the database and updates the value of the SpotPrice item so that openHAB knows about the changed price. This is needed because we saved the spot prices to the Influx DB bypassing the openHAB persitence layers.
+
+Note: Running this rule every hour might cause duplicate SpotPrice entries in your database; there is the originally written point by the `FetchSpotPrices` rule which bypassed normal openHAB persistence layer. When you refresh / update the value of the Item every hour with this optional rule, openHAB may persist the value to your database again.  
 
 ## Inline script action to refresh the value of SpotPrice Item every full hour
 ```Javascript
