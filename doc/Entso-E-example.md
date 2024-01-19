@@ -76,8 +76,10 @@ If you do not see the SpotPrice data in Influx Data Explorer:
 - double check that you have configured `config.js` correctly
 - double check that you have followed the pre-requisite instructions from the main README file 
 
-# Create a Rule UpdateSpotPriceItem
-If you want to render the current spot price in the openHAB user interface, you need to create a Rule that runs every full hour. The Script Action reads the spot price for the current hour from the database and updates the value of the SpotPrice item so that openHAB knows about the changed price. This is needed because we saved the spot prices to the Influx DB bypassing the openHAB persitence layers.
+# Optional: Create a Rule UpdateSpotPriceItem
+If you want to render the current spot price in the openHAB user interface, you need to create a Rule that runs every full hour. The Script Action needs to read the spot price for the current hour from the database and updates the value of the SpotPrice item so that openHAB knows about the changed price. This is needed because we saved the spot prices to the Influx DB bypassing the openHAB persitence layers.
+
+Note: Running this rule every hour might cause duplicate SpotPrice entries in your database; there is the originally written point by the `FetchSpotPrices` rule which bypassed normal openHAB persistence layer. When you refresh / update the value of the Item every hour with this optional rule, openHAB may persist the value to your database again.  
 
 ## Inline script action to refresh the value of SpotPrice Item every full hour
 ```Javascript
