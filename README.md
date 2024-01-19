@@ -1,4 +1,17 @@
 # openHAB Spot Price Optimizer
+- [Introduction](#introduction)
+- [How to control your devices via openHAB](#how-to-control-your-devices-via-openhab)
+- [System requirements and other pre-requisites](#system-requirements-and-other-pre-requisites)
+  - [Entso-E API token and bidding zone](#entso-e-api-token-and-bidding-zone)
+  - [Test InfluxDB persistence with your Items](#test-influxdb-persistence-with-your-items)
+  - [Verify that you are able to view openHAB log entries](#verify-that-you-are-able-to-view-openhab-log-entries)
+- [Installation instructions and usage](#installation-instructions-and-usage)
+  - [Install openhab-spot-price-optimizer scripts](#install-openhab-spot-price-optimizer-scripts)
+  - [Usage examples](#usage-examples)
+  - [User interface examples](#user-interface-examples)
+- [About the author](#about-the-author)
+
+# Introduction
 openHAB Spot Price Optimizer helps you to optimize energy consumption to the cheapest hours of the day using openHAB home automation system.
 
 **Disclaimer**: This solution is provided as an inspiration for other openHAB community members. I disclaim all warranties and responsibilities if you use this solution. In no event shall I be liable for any direct or indirect damages resulting of use this solution. If your setup involves high voltage connections, they must always be designed and done by an authorized electrician.
@@ -76,6 +89,14 @@ The spot prices are read from the Entso-E Transparency Platform API.
 - [Calculate the amount of heating need based on weather forecast](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Calculate-heating-need.md)
 
 ## User interface examples
-- Home page displaying current spot price and current states of the devices
-- Chart visualizing spot prices and control points
-- Page containing widgets to update control parameters
+- [Home page displaying current states of the devices](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/UI-current-states.md)
+- [Chart visualizing spot prices and control points](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/UI-chart-example.md)
+- [Page containing widgets to update control parameters](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/UI-control-parameters.md)
+
+# About the author
+openhab-spot-price-optimizer is developed by [Markus Sipilä](https://fi.linkedin.com/in/markussipila). Publishing this solution as open source is my small contribution to fight the climate crisis. As the share of wind and solar power increase, the importance of demand response becomes increasingly important. Demand response means shifting demand of electricity to times when there is plenty of electricity available or when the other demand is lower. openhab-spot-price-optimizer helps normal households to do exactly this and save money while saving the planet.
+
+# Community and support
+You are more than welcome to join the discussion around this solution on the [openHAB community forum](https://community.openhab.org/t/control-a-water-heater-and-ground-source-heat-pump-based-on-cheap-hours-of-spot-priced-electricity/136566).
+
+Support requests to the community forum, please, not to the issues of this github repo. I have spent a beer (or three) writing these instructions so that they would be as complete as possible. Please respect this effort and re-read this documentation once more before asking for support on the community forum.
