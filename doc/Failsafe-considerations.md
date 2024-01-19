@@ -11,7 +11,7 @@ I use the solution for three things:
 Especially the heating of the house is a critical application. Winters in Southern Finland can be very cold and the temperature can drop below -20 °C. The last thing that we want is that the house freezes.
 
 # Hardware considerations
-All three devices are controlled with relays with Raspberry Pi. The relays controlling the ground source heat pump and boiler are connected so that when Raspberry is powering the relays (relay pulls), the heating is blocked. In other words, if Raspberry would be shut down and the relay does NOT pull, then heating is allowed normally.
+All my three devices are controlled with relays with Raspberry Pi. The relays controlling the ground source heat pump and boiler are connected so that when Raspberry is powering the relays (relay pulls), the heating is blocked. In other words, if Raspberry would be shut down and the relay does NOT pull, then heating is allowed normally.
 
 An electrician installed bypass switches to our electrical cabinet. These switches either allow Raspberry to control the device or make the devices to behave as if Raspberry would not exist.
 
