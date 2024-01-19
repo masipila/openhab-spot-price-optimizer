@@ -52,6 +52,12 @@ if (hours != null) {
 }
 ```
 # Notes
+It's perfectly fine if you wish to use some other Binding to fetch the weather forecast from a provider of your choice. The script above can easily be modified so that you read the average temperature from the Item provided by the Binding you use. As long as you can set the averageTemperature variable to contain the value from the correct Item, you can calculate the number of needed heating hours with this line in the script above.
+
+```Javascript
+hours = heatingCalculator.calculateHeatingHoursLinear(curve, averageTemperature);
+```
+
 Every house is different and requires different amount of heating on different temperatures. The `HeatingCalculator` class uses a linear curve to calculate the number of heating hours on different temperatures. You can experiment how the curve looks like with different parameters for example at https://www.omnicalculator.com/math/line-equation-from-two-points (use temperature as the X parameter and hours as the Y parameter).
 
 The example script above reads the `FMIForecastTemperature` from the database and calculates the average temperature from that. If your house is on a windy place you might want to use the [wind chill compensated temperature](https://en.wikipedia.org/wiki/Wind_chill#North_American_and_United_Kingdom_wind_chill_index) ("feels like" temperature) instead of the temperature. [FMI example](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/FMI-example.md) has an example how to calculate and save `FMIForecastWindChillTemp`.
