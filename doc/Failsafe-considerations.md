@@ -27,4 +27,10 @@ Control points is a fundamental concept of the `openhab-spot-price-optimizer` so
 
 It amount of heating hours is calculated from tomorrow's weather forecast. If the forecast does not exist for whatever reason, the number of required heating hours remains unchanged (instead of dropping to zero).
 
-The control point optimization assumes that the spot prices for tomorrow are available. The spot price data is read from Entso-E Transparency platform which has has planned and unplanned outages every now and then. For this purpose, there is a failsafe mechanism which can copy the control points from the previous day if the spot prices are not available for whatever reason. With this approach the devices will be turned ON and OFF at the same time as the day before.
+## Cloning the control points for tomorrow if spot prices are not available
+The control point optimizers assume that the spot prices for tomorrow are available. If they are not, control points can't obviously be optimized. 
+
+The spot price data is read from Entso-E Transparency platform which can have planned or unplanned outages or your own internet connection might be unavailable when you try to fetch the prices. For this purpose, there is a failsafe mechanism which can copy the control points from the previous day if the spot prices for the next day are not available for whatever reason. With this approach the devices will be turned ON and OFF at the same time as the day before.
+
+Create a new Rule and schedule it to run for example at 23:00
+
