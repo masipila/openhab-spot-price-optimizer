@@ -119,3 +119,18 @@ else {
   console.log("BoilerPower: No state change needed")  
 }
 ```
+# Script for deleting control points
+When developing your solution and experimenting, you might want to delete points from your Influx database. The script below can be used for that.
+
+```Javascript
+// Load modules. Database connection parameters must be defined in config.js.
+Influx = require('openhab-spot-price-optimizer/influx.js');
+
+// Create objects.
+influx = new Influx.Influx();
+
+// Delete BoilerControl points for today.
+start = time.toZDT('00:00');
+stop = start.plusDays(1);
+influx.deletePoints('BoilerControl', start, stop);
+```
