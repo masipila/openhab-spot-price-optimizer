@@ -58,7 +58,7 @@ If you do not see the SpotPrice data in Influx Data Explorer:
 
 If the logs do not reveal the reason, [increase the openHAB log level to DEBUG](https://www.openhab.org/docs/administration/logging.html). The log level can be modified using [openHAB console](https://www.openhab.org/docs/administration/console.html) with a command `log:set DEBUG org.openhab.automation.script.ui.FetchSpotPrices`. Once you've done with debugging, it is recommended to return the log level to INFO to avoid polluting your logs with debug level information. 
 
-# Optional: Calculate distribution price and total price
+## Optional: Calculate distribution price and total price
 The total price of electricity usually consists of the spot price, local network operator's distribution fee and taxes. If you want `openhab-spot-price-optimizer` to optimize against the total price instead of the spot price, you can add two more Items the same ways as above (make sure their type is Number):
 - `DistributionPrice`
 - `TotalPrice`
