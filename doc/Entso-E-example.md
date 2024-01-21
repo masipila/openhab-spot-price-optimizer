@@ -28,40 +28,22 @@ Note: If you make changes to the javascript files (inluding config.js), you must
 // Influx database connection parameters must be configured in config.js
 // Entso-E bidding zone and authentication token must be configured in config.js
 
-// Load modules. CarunaTariffCalculator is optional and needed only if you want to calculate Caruna tariff.
-DateHelper = require('openhab-spot-price-optimizer/date-helper.js');
+// Load modules.
 Entsoe = require('openhab-spot-price-optimizer/entsoe.js');
 Influx = require('openhab-spot-price-optimizer/influx.js');
-CarunaTariffCalculator = require('openhab-spot-price-optimizer/caruna-tariff-calculator.js'); 
 
-// Create objects. tariffCalculator is optional and needed only if you want to calculate Caruna tariff.
-dh = new DateHelper.DateHelper();
+// Create objects.
 entsoe = new Entsoe.Entsoe();
 influx = new Influx.Influx();
-tariffCalculator = new CarunaTariffCalculator.CarunaTariffCalculator(); 
 
-// Get date range in the correct format for Entso-E API, fetch spot prices and save them to influxDB as 'SpotPrice'
-start = dh.getEntsoStart();
-end = dh.getEntsoEnd();
-vat = 1.24; // Multiplier for VAT. Adjust this to your country or leave as 1.0.
+// Multiplier for VAT. Adjust this to your country or leave as 1.0.
+vat = 1.24; 
+
+// Fetch spot prices from yesterday 00:00 to day after tomorrow 00:00. Save them as 'SpotPrice'.
+start = time.toZDT('00:00').minusDays(1);
+end = time.toZDT('00:00').plusDays(2);
 spotPrices = entsoe.getSpotPrices(start, end, vat);
 influx.writePoints('SpotPrice', spotPrices);
-
-// The following part of the code is optional. It calculates the tariff using Caruna Espoo Season Distribution prices.
-// You can remove this or replace it with your own calculation logic. 
-
-dayPrice = 4.18;
-nightPrice = 1.71;
-tax = 2.729372;
-
-h1 = dh.getMidnight('start');
-h2 = dh.getMidnight('stop');
-
-distributionPrices = tariffCalculator.getSeasonDistributionPrices(h1, h2, dayPrice, nightPrice, tax);
-influx.writePoints('DistributionPrice', distributionPrices);
-
-totalPrices = tariffCalculator.getTotalPrices(spotPrices, dayPrice, nightPrice, tax);
-influx.writePoints('TotalPrice', totalPrices);
 ```
 
 ## Validate the results by checking the data in Influx Data Explorer
@@ -75,6 +57,50 @@ If you do not see the SpotPrice data in Influx Data Explorer:
 - double check that you have followed the pre-requisite instructions from the main README file
 
 If the logs do not reveal the reason, [increase the openHAB log level to DEBUG](https://www.openhab.org/docs/administration/logging.html). The log level can be modified using [openHAB console](https://www.openhab.org/docs/administration/console.html) with a command `log:set DEBUG org.openhab.automation.script.ui.FetchSpotPrices`. Once you've done with debugging, it is recommended to return the log level to INFO to avoid polluting your logs with debug level information. 
+
+# Optional: Calculate distribution price and total price
+The total price of electricity usually consists of the spot price, local network operator's distribution fee and taxes. If you want `openhab-spot-price-optimizer` to optimize against the total price instead of the spot price, you can add two more Items the same ways as above (make sure their type is Number):
+- `DistributionPrice`
+- `TotalPrice`
+
+Add a second inline script action to your `FetchSpotPrices` Rule:
+
+```Javascript
+// Load modules. Influx connection parameters must be configured in config.js
+Influx = require('openhab-spot-price-optimizer/influx.js');
+TariffCalculator = require('openhab-spot-price-optimizer/tariff-calculator.js'); 
+
+// Create objects.
+influx = new Influx.Influx();
+tariffCalculator = new TariffCalculator.TariffCalculator(); 
+
+// Calculate distribution fees from yesterday 00:00 to day after tomorrow 00:00.
+start = time.toZDT('00:00').minusDays(1);
+end = time.toZDT('00:00').plusDays(2);
+priceParams = {
+  'price1': 4.18,
+  'price2': 1.71,
+  'tax': 2.73
+};
+distributionPrices = tariffCalculator.getPrices(start, end, 'seasonal', priceParams);
+influx.writePoints('DistributionPrice', distributionPrices);
+
+// Calculate TotalPrices
+spotPrices = influx.getPoints('SpotPrice', start, end);
+distributionPrices = influx.getPoints('DistributionPrice', start, end);
+totalPrices = tariffCalculator.getTotalPrices(spotPrices, distributionPrices);
+influx.writePoints('TotalPrice', totalPrices);
+```
+
+The `TariffCalclator` class currently supports two distribution pricing logics:
+- Caruna Night Distribution: Day price between 7-22, night price between 22-07. 
+- Caruna Seasonal Distribution:
+  - Cheaper price from the beginning of April until the end of October
+  - Same cheaper price during winter Sundays
+  - Same cheaepr price Mon-Sat 22-07
+  - More expensive day price during winter daytime 7-22 except Sundays    
+
+If your operator has some other pricing logic, you can suggest adding support for it.
 
 # Optional: Create a Rule UpdateSpotPriceItem
 If you want to render the current spot price in the openHAB user interface, you need to create a Rule that runs every full hour. The Script Action needs to read the spot price for the current hour from the database and updates the value of the SpotPrice item so that openHAB knows about the changed price. This is needed because we saved the spot prices to the Influx DB bypassing the openHAB persitence layers.
