@@ -104,26 +104,23 @@ influx.writePoints('HeatPumpCompressorControl', points);
 ## Inline script action for the rule
 ```Javascript
 // Load modules. Database connection parameters must be defined in config.js.
-DateHelper = require('openhab-spot-price-optimizer/date-helper.js');
 Influx = require('openhab-spot-price-optimizer/influx.js');
 
 // Create objects.
-dh = new DateHelper.DateHelper();
 influx = new Influx.Influx();
 
 // Read the control value for the current hour from the database.
-start = dh.getCurrentHour();
-control = influx.getCurrentControl('HeatPumpCompressorControl', start);
+control = influx.getCurrentControl('HeatPumpCompressorControl');
 
 // HeatPumpCompressor: Send the commands if state change is needed.
-item = items.getItem("HeatPumpCompressor");
-if (item.state == "ON" && control == 0) {
+HeatPumpCompressor = items.getItem("HeatPumpCompressor");
+if (HeatPumpCompressor.state == "ON" && control == 0) {
   console.log("HeatPumpCompressor: Send OFF")
-  item.sendCommand('OFF'); 
+  HeatPumpCompressor.sendCommand('OFF'); 
 }
-else if (item.state == "OFF" && control == 1) {
+else if (HeatPumpCompressor.state == "OFF" && control == 1) {
   console.log("HeatPumpCompressor: Send ON")
-  item.sendCommand('ON');
+  HeatPumpCompressor.sendCommand('ON');
 }
 else {
   console.log("HeatPumpCompressor: No state change needed")
