@@ -1,7 +1,7 @@
 {
   "name": "openhab-spot-price-optimizer",
-  "version": "1.0.0",
-  "description": "openHAB Spot Price Optimizer modules helps to optimize energy consumption to the cheapest hours of the day.",
+  "version": "2.0.0",
+  "description": "openHAB Spot Price Optimizer module helps to optimize energy consumption to the cheapest hours of the day (demand response).",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
