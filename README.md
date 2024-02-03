@@ -19,13 +19,15 @@ openHAB Spot Price Optimizer helps you to optimize energy consumption to the che
 
 **Disclaimer**: This solution is provided as an inspiration for other openHAB community members. I disclaim all warranties and responsibilities if you use this solution. In no event shall I be liable for any direct or indirect damages resulting of use this solution. If your setup involves high voltage connections, they must always be designed and done by an authorized electrician.
 
-Spot priced electricity contract means that the price of electricity is different for every hour of the day. The day-ahead prices are published at around 13.15 CET/CEST on the [Entso-E Transparency Platform](https://transparency.entsoe.eu).
+Spot priced electricity contract means that the price of electricity is different for every hour of the day. The day-ahead prices for most European countries are published at around 13.15 CET/CEST on the [Entso-E Transparency Platform](https://transparency.entsoe.eu).
 
-This solution helps to automatically schedule the consumption of electricity to the cheapest hours of the next day. The solution can be applied for a variety of devices that you can contorl via openHAB, including heating of your house, heating the domestic hot water with a water boiler, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to be ON or OFF (or have its other kind of state changed). The picutre below illustrate two use cases: heating the domestic hot water (red bars) in the night and heating of a house (yellow bars).
+This solution helps to automatically schedule and optimize the consumption of electricity to the cheapest hours of the next day. The concept is referred as [_demand response_](https://en.wikipedia.org/wiki/Demand_response) in electrical grid. If your electricity contract is based on spot prices, you can [save significant amount of money using home automation](https://community.openhab.org/t/thread-for-discussing-money-saved-with-openhab/146588). 
 
-![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/001cbab8-7391-46e7-ad70-42e4216264c6)
+The solution can be applied for a variety of devices that you can contorl via openHAB, including heating of your house, heating the domestic hot water with a water boiler, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to be ON or OFF (or have its other kind of state changed). The picutre below illustrate two use cases: heating the domestic hot water (red bars) in the night and heating of a house (yellow bars).
 
-The blue area represents the hourly prices of electricity. The yellow bars are the _control points_ for heating the domestic hot water in a boiler during the two cheapest hours of the night. The green bars are the _control points_ when the compressor of a ground source heat pump is allowed to run and heat the house. On this example day, 14 hours of heating is distributed so that the morning and evening price peaks are avoided.
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/88b75db8-e4c5-4d95-86e6-31cdb36b07c1)
+
+The blue area represents the hourly spot prices of electricity. The red bars are the _control points_ for heating the domestic hot water in a boiler during the two cheapest hours of the night. The yellow bars are the _control points_ when the compressor of a ground source heat pump is allowed to run and heat the house. On this example day, 14 hours of heating is distributed so that the morning and evening price peaks are avoided.
 
 # How to control your devices via openHAB
 The openhab-spot-price-optimizer scripts can be used with all kinds of devices, as long as you can control them using openHAB.
@@ -46,7 +48,7 @@ If your device in not connected online or there is no binding available to contr
   - `npm` package manager must be installed on your openHAB server. openHABian operating system image ships with npm pre-installed.
 - influxDB 2.x database must be up and running.
   - openHABian operating system image ships with influxDB pre-installed.
-  - Create an influxDB user, organization and a bucket (database is called a bucket in InfluxDB 2.x) and ensure you have a token with read and write permissions to your bucket.
+  - Create an influxDB _user_, _organization_ and a _bucket_ (database is called a bucket in InfluxDB 2.x) and ensure you have a _token_ with read and write permissions to your bucket.
   - It is recommended to run the InfluxDB on some other server than a Raspberry Pi because the write operations might eventually wear the SD card until it corrupts.
 - JSScripting addon must be installed in openHAB settings. The rules are written as ECMAScript 262 Edition 11. Note the version 11. openHAB 4.x ships with JSScripting so you don't need to install this separately.
 - XSLT Transformation addon must be installed in openHAB settings
@@ -71,18 +73,23 @@ The spot prices are read from the Entso-E Transparency Platform API.
 - If you are yousing openHabian SD image, you can use Frontail log viewer with a web browser from port 9001 of your openHAB server
 - If you don't have Frontail to view the logs using a browser, you can always view the openHAB log files from the command line.
 - Verify that you are able to see the log entries when you toggle your switch Item on/off.
+- [Learn more: logging in openHAB](https://www.openhab.org/docs/administration/logging.html)
 
 # Installation instructions and usage
 ## Install openhab-spot-price-optimizer scripts
-- The openhab-spot-price-optimizer is written in Javascript and published as a npm package.
-- Take a shell connection to your openHAB server and navigate to `openhab/conf/automation/js` directory.
+- The `openhab-spot-price-optimizer` is written in Javascript and published as a npm package.
+- Go to the command line of your openHAB server and navigate to `openhab/conf/automation/js` directory.
+- **WARNING:** If you have previously added scripts to the `automation/js/node_modules` directory manually, make a backup of them.
+  - `npm install` will erase all files and directories under `node_modules` which are not installed with the `npm install` command.
+  - [See openHAB documentation on Javascript libraries](https://www.openhab.org/addons/automation/jsscripting/#libraries).
 - Install the package with a command `npm install openhab-spot-price-optimizer`.
-   - This will create a directory `openhab/conf/automation/js/node_modules` (if it does not exist already) and download openhab-spot-price-optimizer there.
-   - WARNING: If you have previously added scripts to the `node_modules` directory manually, make a backup of them. `npm install` will erase all files and directories under `node_modules` which are not installed with the `npm install` command. [See openHAB documentation on Javascript libraries](https://www.openhab.org/addons/automation/jsscripting/#libraries).
+  - This will create a directory `openhab/conf/automation/js/node_modules` (if it does not exist already)
+  - and download `openhab-spot-price-optimizer` there
 - Edit the `config.js` file of in the `openhab-spot-price-optimizer` directory:
   - Add your influxDB connection parameters and authentication token
-  - Add your Entso-E API token and bidding zone 
-- You can now write openHAB Rules which can fetch the spot prices from Entso-E API and use the openhab-spot-price-optimizer algorithms. See examples below.
+  - Add your Entso-E API token and bidding zone
+  - It is recommended to take a backup of this configuration file and store it in a safe place  
+- You can now write openHAB Rules which can fetch the spot prices from Entso-E API and use the `openhab-spot-price-optimizer` algorithms. See examples below.
 
 ## Usage examples
 - [Fetch spot prices from Entso-E API and save them to InfluxDB](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Entso-E-example.md)
@@ -100,12 +107,12 @@ The spot prices are read from the Entso-E Transparency Platform API.
 When controlling real-world devices, it is more than healthy to consider what can go wrong and what happens when (not if) that happens. [Read more on failsafe considerations](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Failsafe-considerations.md).
 
 ## Remote access
-If you run openHAB at your home network, it's quite nice to to be able to access it remotely with mobile phone. Exposing your openHAB directly to public internet is a Bad Idea (TM) as it will be under continuous attacks in no time (it's probably a question of minutes, max hours, not days after you expose it to public internet). To securely use your openHAB remotely, I can warmly recommend using [Tailscale VPN](https://tailscale.com/), which is free for personal use and super simple to install.  
+If you run openHAB at your home network, it's quite nice to to be able to access it remotely with mobile phone. Exposing your openHAB directly to public internet is a Bad Idea (TM) as it will be under continuous attacks in a matter of minutes or a couple of hours. To securely use your openHAB remotely, I can warmly recommend using [Tailscale VPN](https://tailscale.com/), which is free for personal use and super simple to install.  
 
 # About the author
-openhab-spot-price-optimizer is developed by [Markus Sipilä](https://fi.linkedin.com/in/markussipila). Publishing this solution as open source is my small contribution to fight the climate crisis. As the share of wind and solar power increase, the importance of demand response becomes increasingly important. Demand response means shifting demand of electricity to times when there is plenty of electricity available or when the other demand is lower. openhab-spot-price-optimizer helps normal households to do exactly this and save money while saving the planet.
+openhab-spot-price-optimizer is developed by [Markus Sipilä](https://fi.linkedin.com/in/markussipila). Publishing this solution as open source is my small contribution to fight the climate crisis. As the share of wind and solar power increase, the importance of _demand response_ becomes increasingly important. Demand response means shifting demand of electricity to times when there is plenty of electricity available or when the other demand is lower. `openhab-spot-price-optimizer` helps normal households to do exactly this and save money.
 
 # Community and support
 You are more than welcome to join the discussion around this solution on the [openHAB community forum](https://community.openhab.org/t/control-a-water-heater-and-ground-source-heat-pump-based-on-cheap-hours-of-spot-priced-electricity/136566).
 
-Support requests to the community forum, please, not to the issues of this github repo. I have spent a beer (or three) writing these instructions so that they would be as complete as possible. Please respect this effort and re-read this documentation once more before asking for support on the community forum.
+Support requests to the community forum, please, not to the issues of this github repo. I have spent a beer (or three) writing these instructions so that they would be as complete as possible. I kindly ask you to respect this effort and read this documentation once more before asking for support on the community forum. This request does not mean that you would not be welcome to the community discussions, quite the contradictory. It simply means that most problems can be fixed by double checking that your implementation follows the documentation.

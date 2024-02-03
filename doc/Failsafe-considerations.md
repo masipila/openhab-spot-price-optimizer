@@ -27,4 +27,46 @@ Control points is a fundamental concept of the `openhab-spot-price-optimizer` so
 
 It amount of heating hours is calculated from tomorrow's weather forecast. If the forecast does not exist for whatever reason, the number of required heating hours remains unchanged (instead of dropping to zero).
 
-The control point optimization assumes that the spot prices for tomorrow are available. The spot price data is read from Entso-E Transparency platform which has has planned and unplanned outages every now and then. For this purpose, there is a failsafe mechanism which can copy the control points from the previous day if the spot prices are not available for whatever reason. With this approach the devices will be turned ON and OFF at the same time as the day before.
+## Cloning the control points for tomorrow if spot prices are not available
+The control point optimizers assume that the spot prices for tomorrow are available. If they are not, control points can't obviously be optimized. 
+
+The spot price data is read from Entso-E Transparency platform which can have planned or unplanned outages or your own internet connection might be unavailable when you try to fetch the prices. For this purpose, there is a failsafe mechanism which can copy the control points from the previous day if the spot prices for the next day are not available for whatever reason. With this approach the devices will be turned ON and OFF at the same time as the day before.
+
+### Create a new Rule `CloneControlPoints` and schedule it to run for example at 23:00
+The following inline script action:
+- First checks if there is a SpotPrice available for tomorrow at 12:00
+- If not, it reads the control points for today for `BoilerControl` and `HeatPumpCompressorControl`
+- And clones them for tomorrow and saves them to the database
+- This the devices will behave tomorrow like they did today and if the price profile is somewhat similar than today, the run times should be quite OK. 
+
+```Javascript
+// Load modules. Database connection parameters must be defined in config.js.
+Influx = require('openhab-spot-price-optimizer/influx.js');
+ControlPointCloner = require('openhab-spot-price-optimizer/control-point-cloner.js')
+
+// Create objects.
+influx = new Influx.Influx();
+cloner = new ControlPointCloner.ControlPointCloner();
+
+// Check if spot price is available for tomorrow 12:00
+start = time.toZDT('12:00').plusDays(1);
+stop = start.plusHours(1);
+prices = influx.getPoints('SpotPrice', start, stop);
+
+// Clone the control points if spot prices are missing
+if (prices.length < 1) {
+  console.log("Spot prices missing for tomorrow!");
+  start = time.toZDT('00:00');
+  stop = start.plusDays(1);
+  
+  // BoilerControl: Read control points for today and clone for tomorrow.
+  pointsToday = influx.getPoints('BoilerControl', start, stop);
+  pointsTomorrow = cloner.getClonedControlPoints(pointsToday);
+  influx.writePoints('BoilerControl', pointsTomorrow);
+  
+  // HeatPumpCompressorControl: Read control points for today and clone for tomorrow.
+  pointsToday = influx.getPoints('HeatPumpCompressorControl', start, stop);
+  pointsTomorrow = cloner.getClonedControlPoints(pointsToday);
+  influx.writePoints('HeatPumpCompressorControl', pointsTomorrow);
+}
+```

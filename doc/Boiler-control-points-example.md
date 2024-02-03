@@ -97,28 +97,40 @@ The `GenericOptimizer` optimizing class provides has the following functions:
 ## Inline script action for the rule
 ```Javascript
 // Load modules. Database connection parameters must be defined in config.js.
-DateHelper = require('openhab-spot-price-optimizer/date-helper.js');
 Influx = require('openhab-spot-price-optimizer/influx.js');
 
 // Create objects.
-dh = new DateHelper.DateHelper();
 influx = new Influx.Influx();
 
 // Read the control value for the current hour from the database.
-start = dh.getCurrentHour();
-control = influx.getCurrentControl('BoilerControl', start);
+control = influx.getCurrentControl('BoilerControl');
 
 // BoilerPower: Send the commands if state change is needed.
-item = items.getItem("BoilerPower");
-if (item.state == "ON" && control == 0) {
-  console.log("Boiler: Send OFF")
-  item.sendCommand('OFF');
+BoilerPower = items.getItem("BoilerPower");
+if (BoilerPower.state == "ON" && control == 0) {
+  console.log("BoilerPower: Send OFF")
+  BoilerPower.sendCommand('OFF');
 }
-else if (item.state == "OFF" && control == 1) {
-  console.log("Boiler: Send OFF")
-  item.sendCommand('ON');
+else if (BoilerPower.state == "OFF" && control == 1) {
+  console.log("BoilerPower: Send OFF")
+  BoilerPower.sendCommand('ON');
 }
 else {
-  console.log("Boiler: No state change needed")  
+  console.log("BoilerPower: No state change needed")  
 }
+```
+# Script for deleting control points
+When developing your solution and experimenting, you might want to delete points from your Influx database. The script below can be used for that.
+
+```Javascript
+// Load modules. Database connection parameters must be defined in config.js.
+Influx = require('openhab-spot-price-optimizer/influx.js');
+
+// Create objects.
+influx = new Influx.Influx();
+
+// Delete BoilerControl points for today.
+start = time.toZDT('00:00');
+stop = start.plusDays(1);
+influx.deletePoints('BoilerControl', start, stop);
 ```
