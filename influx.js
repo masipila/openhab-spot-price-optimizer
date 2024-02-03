@@ -15,17 +15,16 @@ class Influx {
      *
      * @param string measurement
      *   Name of the Influx measurement.
-     * @param Date start
-     *   Pass current full hour as a Date object.
      *
      * @return int
-     *   Returns 1 or 0. If no control is found, defaults to 1.
+     *   If no control is found, defaults to 1 as a failsafe.
      */
-    getCurrentControl(measurement, start) {
+    getCurrentControl(measurement) {
 	console.log('influx.js: Getting the current control value for ' + measurement + '...');
 
-	let stop = new Date(start.getTime());
-	stop.setHours(stop.getHours() + 1);
+	let start = time.toZDT().withMinute(0).withSecond(0).withNano(0);
+	let stop = start.plusHours(1);
+
 	let points = this.getPoints(measurement, start, stop);
 	if (points && points.length) {
 	    const control = points[0].value;
@@ -43,10 +42,10 @@ class Influx {
      *
      * @param string measurement
      *   Name of the Influx measurement.
-     * @param Date start
-     *   Start of the range as a Date object.
-     * @param Date stop
-     *   Stop of the range as a Date object.
+     * @param ZonedDateTime start
+     *   Start of the range.
+     * @param ZonedDateTime stop
+     *   Stop of the range.
      *
      * @return array
      *   Array of datetime-value pairs for given measurement.
@@ -59,17 +58,22 @@ class Influx {
 	}
 
 	const http = Java.type("org.openhab.core.model.script.actions.HTTP");
-	const url = this.config.influx.baseUrl + 'query?' + 'org=' + this.config.influx.org + '&bucket=' + this.config.influx.bucket;
-	console.debug('influx.js: URL:' + url);
+	const startStr = start.format(time.DateTimeFormatter.ISO_INSTANT);
+	const stopStr = stop.format(time.DateTimeFormatter.ISO_INSTANT);
+
 	const headers = {
 	    'Authorization': 'Token ' + this.config.influx.token,
 	    'Content-Type': 'application/vnd.flux'
 	};
+
+	const url = this.config.influx.baseUrl + 'query?' + 'org=' + this.config.influx.org + '&bucket=' + this.config.influx.bucket;
 	const fluxQuery = 'from(bucket: \"' + this.config.influx.bucket + '\") ' +
-              '|> range(start: ' + start.toISOString() + ', stop: ' + stop.toISOString() + ') ' +
+              '|> range(start: ' + startStr + ', stop: ' + stopStr + ') ' +
               '|> filter(fn: (r) => r[\"_measurement\"] == \"' + measurement + '\") ' +
               '|> filter(fn: (r) => not exists r["item"])';
-	console.debug('influx.js: ' + fluxQuery);
+	console.debug('influx.js: URL: ' + url);
+	console.debug('influx.js: Flux query: ' + fluxQuery);
+
 	let response = '';
 	try {
 	    response = http.sendHttpPostRequest(url, 'application/json', fluxQuery, headers, 5000);
@@ -105,8 +109,10 @@ class Influx {
 	    // console.debug('influx.js: ' + rows[i]);
 	    let row = rows[i];
 	    let cols = row.split(',');
+	    // Ensure datetime string is formatted consistently.
+	    let zdt = time.toZDT(cols[colDatetime]);
 	    let point = {
-		datetime: cols[colDatetime],
+		datetime: zdt.format(time.DateTimeFormatter.ISO_INSTANT),
 		value: parseFloat(cols[colValue])
 	    }
 	    results.push(point);
@@ -124,53 +130,47 @@ class Influx {
      *   Name of the Influx measurement.
      * @param array points
      *   Array of timestamp-value objects.
-     *
-     * @return bool
      */
     writePoints(measurement, points) {
 	// Early exit if connection parameters have not been configured in config.js
 	if (this.config.influx.token == 'insert-your-token-here') {
 	    console.error("influx.js: Influx API token not configured in config.js!");
-	    return false;
+	    return null;
 	}
 
 	// Early exit if points are null
 	if (points == null) {
 	    console.error("influx.js: Unable to write points for measurement " + measurement + ", empty points received as input!");
-	    return false;
+	    return null;
 	}
 
-	const n = Object.keys(points).length;
-	console.log('influx.js: Preparing to write ' + n + ' points to the database for ' + measurement);
 	const http = Java.type("org.openhab.core.model.script.actions.HTTP");
-	const url = this.config.influx.baseUrl + 'write?' + 'org=' + this.config.influx.org + '&bucket=' + this.config.influx.bucket + '&precision=ms';
+	const n = points.length;
+	const url = this.config.influx.baseUrl + 'write?' + 'org=' + this.config.influx.org + '&bucket=' + this.config.influx.bucket + '&precision=s';
 	const headers = {
 	    Authorization: 'Token ' + this.config.influx.token
 	};
+	console.log('influx.js: Preparing to write ' + n + ' points to the database for ' + measurement);
 
-	let response = false;
 	try {
 	    for (let i = 0; i < n; i++) {
+		// Bail out if we don't have expected data
+		if (points[i].value === undefined || points[i].datetime === undefined) {
+		    console.error("influx.js: Unexpected input at position " + i);
+		    continue;
+		}
 		let value = points[i].value;
 		let datetime = points[i].datetime;
-		let timestamp = new Date(datetime).getTime();
+		let timestamp = time.toZDT(datetime).toEpochSecond();
 		let data = measurement + ' value=' + value + ' ' + timestamp;
-		//console.debug('influx.js: ' + data);
-		try {
-		    http.sendHttpPostRequest(url, 'application/json', data, headers, 5000);
-		}
-		catch (exception) {
-		    console.error('influx.js: Post request to Influx DB HTTP API failed!');
-		    console.error(exception.message);
-		}
+		console.debug('influx.js: ' + data);
+		http.sendHttpPostRequest(url, 'application/json', data, headers, 5000);
 	    }
-	    response = true;
-	    console.log('influx.js: Points successfully saved for measurement ' + measurement);
 	}
 	catch (exception) {
-	    console.error('influx.js: Exception saving points for measurement ' + measurement + ': ' + exception.message);
+	    console.error('influx.js: Exception saving points for measurement ' + measurement);
+	    console.error(exception.message);
 	}
-	return response;
     }
 
     /**
@@ -178,10 +178,10 @@ class Influx {
      *
      * @param string measurement
      *   Name of the Influx measurement.
-     * @param string start
-     *   Start datetime of the range in ISO8601 format, e.g. 2022-06-27T00:00:00.000Z
-     * @param string stop
-     *   Stop datetime of the range in ISO8601 format, e.g. 2022-06-28T00:00:00.000Z
+     * @param ZonedDateTime start
+     *   Start datetime of the range as ZonedDateTime object
+     * @param ZonedDateTime stop
+     *   Stop datetime of the range as ZonedDateTime object
      */
     deletePoints(measurement, start, stop) {
 	// Early exit if connection parameters have not been configured in config.js
@@ -197,8 +197,8 @@ class Influx {
 	};
 
 	const deleteFlux = {
-	    start: start,
-	    stop: stop,
+	    start: start.format(time.DateTimeFormatter.ISO_INSTANT),
+	    stop: stop.format(time.DateTimeFormatter.ISO_INSTANT),
 	    predicate: '_measurement="' + measurement + '"'
 	};
 
