@@ -18,26 +18,29 @@ This documentation page gives an example how the `HeatingHours` Item can be auto
 ## Inline script action for the rule
 ```Javascript
 // Load modules. Database connection parameters must be defined in config.js.
-DateHelper = require('openhab-spot-price-optimizer/date-helper.js');
 Influx = require('openhab-spot-price-optimizer/influx.js');
 HeatingCalculator = require('openhab-spot-price-optimizer/heating-calculator.js');
 
 // Create objects.
-dh = new DateHelper.DateHelper();
 influx = new Influx.Influx();
 heatingCalculator = new HeatingCalculator.HeatingCalculator();
 
-// Read weather forecast from the database and calculate average temperature.
-start = dh.getMidnight('start');
-stop = dh.getMidnight('stop');
+//If the script is called after 14.00, read tomorrow's forecast from the database. Otherwise for today.
+start = time.toZDT('00:00');
+if (time.toZDT().isBetweenTimes('14:00', '23:59')) {
+  start = start.plusDays(1);    
+}
+stop = start.plusDays(1);
 forecast = influx.getPoints('FMIForecastTemperature', start, stop);
 heatingCalculator.setForecast(forecast);
+
+// Calculate average temperature.
 averageTemperature = heatingCalculator.calculateAverageTemperature();
 
 // Calculate the number of required heating hours using a linear curve.
 // Adjust the two points to be suitable for your house.
 curve = [
-  {"temperature": -40, "hours": 24},
+  {"temperature": -38, "hours": 24},
   {"temperature": 18, "hours": 2}
 ];
 hours = heatingCalculator.calculateHeatingHoursLinear(curve, averageTemperature);
