@@ -1,5 +1,5 @@
 # Usage example: Fetch spot prices from Entso-E API
-Note: This solution was originally built in 2022 when openHAB did not have a capability where Bindings can persist forecast time series data. This capability has been added to openHAB 4.1 and it might be that there will be an Entso-E Binding developed at some point. 
+Note: This solution was originally built in 2022 when openHAB did not have a capability where Bindings can persist forecast time series data. This capability has been added to openHAB 4.1 and it might be that there will be an Entso-E Binding developed at some point. When that happens, the optimizer scripts can still be used but you can replace the Rule described on this page with the binding. 
 
 ## Pre-requisites
 - See a list of pre-requisites from the main README.md file and make sure you have followed them precisely.
@@ -10,17 +10,20 @@ Note: This solution was originally built in 2022 when openHAB did not have a cap
 First create an Item called `SpotPrice` so that you will be able to use the SpotPrice values in the openHAB charts.  
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/60c176cf-c585-4df7-a963-9ad41ec2952c)
 
-Optionally, you can create Items `DistributionPrice` and `TotalPrice` if you want to include the tariffs in your optimizations.
+Optionally, you can create Items `DistributionPrice` and `TotalPrice` in addition to `SpotPrice` if you want to include the tariffs in your optimizations.
 
 # Create a Rule FetchSpotPrices
-- Create a new Rule called `FetchSpotPrices´ which will fetch the spot prices from Entso-E API and save them to your InfluxDB using the Influx HTTP API. In other words, the openHAB persistence layer is NOT used to access the database, the script will call Influx HTTP API directly.
+- Create a new Rule called `FetchSpotPrices` which will fetch the spot prices from Entso-E API and save them to your InfluxDB using the Influx HTTP API. In other words, the openHAB persistence layer is NOT used to access the database, the script will call Influx HTTP API directly.
 - You can schedule the Rule to be run for example at 13.15 CET/CEST and 14.15 CET/CEST
 - Copy-paste the code below as the Script Action (ECMAScript 262 Edition 11).
 - The script will write the spot prices as `SpotPrice` time series to your InfluxDB
  
-Entso-E publishes the spot prices for next day in the afternoon. date-helper.js module has logic that if the script is executed at 14:00 or later, it will fetch tomorrow’s prices. If the rule is executed before that, it will fetch current day's prices. The script can be executed multiple times, possible previous database points are overwritten.
+Entso-E publishes the spot prices for next day in the afternoon. The example script below requests spot prices for yesterday, today and tomorrow so some prices should always be included in the response even if you would execute it in the morning and tomorrow's prices are not yet available. The script can be executed multiple times, possible previous database points are overwritten.
 
-Note: If you make changes to the javascript files (inluding config.js), you must re-save the Script Action (the code snippet below) to make sure openHAB re-reads the javascript files.
+Notes:
+- If you make changes to the javascript files (inluding `config.js`), you must re-save the Script Action (the code snippet below) to make sure openHAB re-reads the javascript files.
+- [There are excellent examples on date and time handling in openHAB community forum](https://community.openhab.org/t/working-with-date-times-in-js-scripting-ecmascript-11/138563)
+- Use midnight to midnight time intervals (on your local timezone) in this rule. The interval is automatically adjusted to midnights at CET/CEST timezone which is the timezone for the day-ahead prices.
 
 ## Inline script action for fetching the spot prices
 
@@ -47,7 +50,7 @@ influx.writePoints('SpotPrice', spotPrices);
 ```
 
 ## Validate the results by checking the data in Influx Data Explorer
-Run the Rule manually and check from your InfluxDB Data Explorer that you can see the spot prices for today / tomorrow (depending on the time of the day when you executed the script). If you run the rule in the afternoon or evening, the script will fetch tomorrow's spot prices. Remember to choose a date range in Influx data explorer which includes the day you just fetched the prices for.
+Run the Rule manually and check from your InfluxDB Data Explorer that you can see the spot prices. If you run the rule in the afternoon or evening after the day-ahead prices have been published, the prices will include tomorrow. Remember to choose a date range in Influx data explorer which includes the day you just fetched the prices for.
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/fd1e22cf-bb19-4316-a233-f8fd36a3610c)
 
@@ -63,7 +66,7 @@ The total price of electricity usually consists of the spot price, local network
 - `DistributionPrice`
 - `TotalPrice`
 
-Add a second inline script action to your `FetchSpotPrices` Rule:
+Add a second inline script action to your `FetchSpotPrices` Rule with the following code:
 
 ```Javascript
 // Load modules. Influx connection parameters must be configured in config.js
@@ -93,7 +96,7 @@ influx.writePoints('TotalPrice', totalPrices);
 ```
 
 The `TariffCalclator` class currently supports two distribution pricing logics:
-- Caruna Night Distribution: Day price between 7-22, night price between 22-07. 
+- Caruna Night Distribution: Day price between 07-22, night price between 22-07. 
 - Caruna Seasonal Distribution:
   - Cheaper price from the beginning of April until the end of October
   - Same cheaper price during winter Sundays
@@ -103,23 +106,20 @@ The `TariffCalclator` class currently supports two distribution pricing logics:
 If your operator has some other pricing logic, you can suggest adding support for it.
 
 # Optional: Create a Rule UpdateSpotPriceItem
-If you want to render the current spot price in the openHAB user interface, you need to create a Rule that runs every full hour. The Script Action needs to read the spot price for the current hour from the database and updates the value of the SpotPrice item so that openHAB knows about the changed price. This is needed because we saved the spot prices to the Influx DB bypassing the openHAB persitence layers.
+If you want to render the current spot price in the openHAB user interface, you need to create a Rule that runs every full hour. The Script Action needs to read the spot price for the current hour from the database and update the value of the SpotPrice item so that openHAB knows about the changed price. This is needed because we saved the spot prices to the Influx DB bypassing the openHAB persitence layers.
 
 Note: Running this rule every hour might cause duplicate SpotPrice entries in your database; there is the originally written point by the `FetchSpotPrices` rule which bypassed normal openHAB persistence layer. When you refresh / update the value of the Item every hour with this optional rule, openHAB may persist the value to your database again.  
 
 ## Inline script action to refresh the value of SpotPrice Item every full hour
 ```Javascript
 // Load modules. Database connection parameters must be defined in config.js.
-DateHelper = require('openhab-spot-price-optimizer/date-helper.js');
 Influx = require('openhab-spot-price-optimizer/influx.js');
 
 // Create objects.
-dh = new DateHelper.DateHelper();
 influx = new Influx.Influx();
 
 // Update the spot price Item with the price of the current hour
-now = dh.getCurrentHour();
-currentPrice = influx.getCurrentControl('SpotPrice', now);
+currentPrice = influx.getCurrentControl('SpotPrice');
 item = items.getItem('SpotPrice');
-item.postUpdate(currentPrice);
+item.sendCommand(currentPrice);
 ```
