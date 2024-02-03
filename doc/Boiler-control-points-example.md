@@ -18,8 +18,8 @@ This documenation page gives an example how to use the `GenericOptimizer` class 
 - In order to optimize the heating of domestic hot water, our optimizing script needs to know how many hours the boiler needs to be ON to reach its thermostate max temperature.
 - We don't want to hard code this number to our script, so let's create an Item `BoilerHours` which we can easily update with an user interface widget.
 - The type of this Item must be Number
-- [See an example of a Control parameters page which shows how this value can be easily changed](./Control-parameters-UI-example.md)
-  
+- [See an example of a Control parameters page which shows how this value can be easily changed](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/UI-control-parameters.md)
+
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/fc0e1cdc-dc44-4dc5-a0b4-55c07342fd65)
 
 ## Create an item 'BoilerControl'
@@ -46,18 +46,21 @@ This documenation page gives an example how to use the `GenericOptimizer` class 
 
 ```Javascript
 // Load modules. Database connection parameters must be defined in config.js.
-DateHelper = require('openhab-spot-price-optimizer/date-helper.js');
 Influx = require('openhab-spot-price-optimizer/influx.js');
 GenericOptimizer = require('openhab-spot-price-optimizer/generic-optimizer.js');
 
 // Create objects.
-dh = new DateHelper.DateHelper();
 influx = new Influx.Influx();
-optimizer = new GenericOptimizer.GenericOptimizer();
+optimizer = new GenericOptimizer.GenericOptimizer('PT60M');
+
+//If the script is called after 14.00, optimize tomorrow. Otherwise optimize today.
+start = time.toZDT('00:00');
+if (time.toZDT().isBetweenTimes('14:00', '23:59')) {
+  start = start.plusDays(1);    
+}
+stop = start.plusDays(1);
 
 // Read spot prices from InfluxDB and pass them for the optimizer.
-start = dh.getMidnight('start');
-stop = dh.getMidnight('stop');
 prices = influx.getPoints('SpotPrice', start, stop);
 optimizer.setPrices(prices);
 
@@ -66,20 +69,20 @@ item = items.getItem("BoilerHours");
 hours = Math.round(item.state);
 
 // Optimize the control points and save them to the database.
-optimizer.allowPeriod(hours);
-optimizer.blockRemainingHours();
+optimizer.allowCheapestPeriod(hours);
+optimizer.blockAllRemaining();
 points = optimizer.getControlPoints();
 influx.writePoints('BoilerControl', points);
 ```
 
 The `GenericOptimizer` optimizing class provides has the following functions:
-- `allowHours(N)`: Finds N cheapest hours from the given spot prices and allows them.
-- `allowPeriod(N)`: Finds the cheapest consequtive N hour period from the given spot prices and allows them.
-- `blocHours(N)`: Finds N most expensive hours from the given spot prices and blocks them.
-- `blockPeriod(N)`: Finds the most expensive consequtive N hour period from the given spot prices and blocks them.
-- `allowRemainingHours()`: Allows all remaining hours from the spot prices which have not been allowed or blocked yet.
-- `blockRemainingHours()`: Blocks all remaining hours from the spot prices which have not been allowed or blocked yet.
-- Note how the script above combines `allowPeriod` and `blockRemainingHours`. All hours must have a control value.
+- `allowIndividualHours(N)`: Finds N cheapest hours and allows them.
+- `allowCheapestPeriod(N)`: Finds the cheapest consequtive N hour period and allows them.
+- `blockIndividualHours(N)`: Finds N most expensive hours and blocks them.
+- `blockMostExpensivePeriod(N)`: Finds the most expensive consequtive N hour period and blocks them.
+- `allowAllRemaining()`: Allows all remaining hours from the spot prices which have not been allowed or blocked yet.
+- `blockAllRemaining()`: Blocks all remaining hours from the spot prices which have not been allowed or blocked yet.
+- Note how the script above combines `allowIndividualHours` and `blockAllRemaining`. All hours must have a control value so the remaining hours need to be blocked after the cheapest ones have been allowed.
 
 ## Invoke this Rule also after the spot prices have been fetched
 - The rule was defined to be run every time after the item `BoilerHours` changes. But what if this value is kept unchanged day after a day?
