@@ -5,225 +5,197 @@ class GenericOptimizer {
 
     /**
      * Constructor.
+     *
+     * @param string resolution
+     *   Resolution of the spot price time series, e.g. 'PT60M' for 60 mins.
      */
-    constructor() {
-	// Initialize this.prices with an empty array just in case.
+    constructor(resolution='PT60M') {
 	this.prices = [];
+	this.resolution = time.Duration.parse(resolution);
+	this.error = false;
     }
 
     /**
      * Sets the prices array.
      *
-     * @param prices
+     * @param array prices
      *   Array of spot prices as datetime-value pairs.
      */
     setPrices(prices) {
+	// Countries East from CET will have some hours fetched the day before.
+	// Calculate the offset between local time zone and CET/CEST.
+	const local = time.toZDT();
+	const cet = local.withZoneSameLocal(time.ZoneId.of("Europe/Berlin"));
+	const offset = time.ChronoUnit.HOURS.between(local, cet);
+
+	// Check that there is enough prices.
+	const duration = this.resolution.multipliedBy(prices.length);
+	if (duration.compareTo(time.Duration.ofHours(offset + 1)) < 0) {
+	    this.error = true;
+	    console.error("generic-optimizer.js: Not enough prices for optimizations!");
+	    return null;
+	}
+
 	this.prices = prices;
-	console.debug('generic-optimizer.js: Spot prices');
+	this.priceStart = time.toZDT(this.prices[0].datetime);
+	this.priceEnd = time.toZDT(this.prices[this.prices.length - 1].datetime).plus(this.resolution);
+	this.priceWindowDuration = time.Duration.between(this.priceStart, this.priceEnd);
+
+	console.debug("generic-optimizer.js: prices start at " + this.priceStart);
+	console.debug("generic-optimizer.js: prices end at " + this.priceEnd);
+	console.debug("generic-optimizer.js: price window duration: " + this.priceWindowDuration);
 	console.debug(JSON.stringify(this.prices));
     }
 
     /**
      * Finds N cheapest individual hours and allows them.
      *
+     * Input parameter is taken as a number (instead of a Duration) so that it's easy to
+     * pass the value from an Item.
+     *
      * @param int n
      *   Number of cheap hours to find.
      */
-    allowHours(n) {
+    allowIndividualHours(n) {
 	console.log('generic-optimizer.js: Searching for ' + n + ' cheapest hours...');
+	const duration = time.Duration.ofHours(1);
 
-	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
-	if (this.prices.length < 2) {
-	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	// Early exit if prices are not available.
+	if (this.error) {
+	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
 	    return null;
 	}
 
 	// Early exit if not enough prices are available.
-	if (n > this.prices.length) {
-	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.prices.length + " hour");
+	if (time.Duration.ofHours(n).compareTo(this.priceWindowDuration) > 0) {
+	    this.error = true;
+	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.priceWindowDuration);
 	    return null;
 	}
 
-	// Sort prices array by price
-	this.prices.sort((a, b) => (a.value > b.value) ? 1 : -1);
-
 	// Allow n cheapest hours.
 	for (let i = 0; i < n; i++) {
-	    this.prices[i]['control'] = 1;
+	    let prices = this.calculatePeriodPrices(duration, 'asc');
+	    if (prices.length > 0) {
+		let start = time.toZDT(prices[0].datetime);
+		this.setControlForPeriod(start, duration, 1);
+	    }
 	}
-
-	// Return sort by datetime.
-	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
-
-	console.debug('generic-optimizer.js: Spot prices and control values');
-	console.debug(JSON.stringify(this.prices));
     }
 
     /**
      * Finds N most expensive individual hours and blocks them.
      *
+     * Input parameter is taken as a number (instead of a Duration) so that it's easy to
+     * pass the value from an Item.
+     *
      * @param int n
      *   Number of expensive hours to find.
      */
-    blockHours(n) {
+    blockIndividualHours(n) {
 	console.log('generic-optimizer.js: Searching for ' + n + ' most expensive hours...');
+	const duration = time.Duration.ofHours(1);
 
-	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
-	if (this.prices.length < 2) {
-	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	// Early exit if prices are not available.
+	if (this.error) {
+	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
 	    return null;
 	}
 
 	// Early exit if not enough prices are available.
-	if (n > this.prices.length) {
-	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.prices.length + " hour");
+	if (time.Duration.ofHours(n).compareTo(this.priceWindowDuration) > 0) {
+	    this.error = true;
+	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.priceWindowDuration);
 	    return null;
 	}
 
-	// Sort prices array by price.
-	this.prices.sort((a, b) => (a.value > b.value) ? -1 : 1);
-
-	// Block n most expensive hours.
+	// Allow n most expensive hours.
 	for (let i = 0; i < n; i++) {
-	    this.prices[i]['control'] = 0;
+	    let prices = this.calculatePeriodPrices(duration, 'desc');
+	    if (prices.length > 0) {
+		let start = time.toZDT(prices[0].datetime);
+		this.setControlForPeriod(start, duration, 0);
+	    }
 	}
-
-	// Return sort by datetime.
-	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
-
-	console.debug('generic-optimizer.js: Spot prices and control values');
-	console.debug(JSON.stringify(this.prices));
     }
 
     /**
-     * Allows a period of N hours.
+     * Allows the cheapest period of N hours.
      *
-     * @param int startIndex
-     *   Index of the hour when the period starts.
+     * Input parameter is taken as a number (instead of a Duration) so that it's easy to
+     * pass the value from an Item.
+     *
      * @param int n
-     *   Duration of the period to be allowed.
-     * @param int surroundingHours
-     *   Number of hours to be blocked just before and after the allowed period.
+     *   Duration of the period to be allowed in hours.
      */
-    allowPeriod(n, surroundingHours=0) {
-	console.log('generic-optimizer.js: Searching for the cheapest ' + n + ' hour period...');
+    allowCheapestPeriod(n) {
+	console.log('generic-optimizer.js: Allowing the cheapest ' + n + ' hour period...');
+	const duration = time.Duration.ofHours(n);
 
-	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
-	if (this.prices.length < 2) {
-	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	// Early exit if prices are not available.
+	if (this.error) {
+	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
 	    return null;
 	}
 
 	// Early exit if not enough prices are available.
-	if (n > this.prices.length) {
-	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.prices.length + " hour");
+	if (time.Duration.ofHours(n).compareTo(this.priceWindowDuration) > 0) {
+	    this.error = true;
+	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.priceWindowDuration);
 	    return null;
 	}
 
-	// Ensure prices are sorted by datetime.
-	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
-
-	// Find the index when the period starts.
-	let startIndex = this.findPeriodStart(n, true);
-
-	// Block the previous hours if they are available in the prices array.
-	if (surroundingHours) {
-	    for (let i = 1; i <= surroundingHours; i++) {
-		let j = startIndex - i;
-		if (j in this.prices) {
-		    this.prices[j]['control'] = 0;
-		}
-	    }
+	// Allow the cheapest period.
+	let prices = this.calculatePeriodPrices(duration, 'asc');
+	if (prices.length > 0) {
+	    let start = time.toZDT(prices[0].datetime);
+	    this.setControlForPeriod(start, duration, 1);
 	}
-
-	// Allow the hours of the period.
-	for (let i = startIndex; i < startIndex + n; i++) {
-	    this.prices[i]['control'] = 1;
-	}
-
-	// Block the next hours if they are available in the prices array.
-	if (surroundingHours) {
-	    for (let i = 0; i < surroundingHours; i++) {
-		let j = startIndex + n + i;
-		if (j in this.prices) {
-		    this.prices[j]['control'] = 0;
-		}
-	    }
-	}
-
-	console.debug('generic-optimizer.js: Spot prices and control values');
-	console.debug(JSON.stringify(this.prices));
     }
 
     /**
-     * Blocks a period of N hours.
+     * Blocks the most expensive period of N hours.
      *
-     * @param int startIndex
-     *   Index of the hour when the period starts.
+     * Input parameter is taken as a number (instead of a Duration) so that it's easy to
+     * pass the value from an Item.
+     *
      * @param int n
-     *   Duration of the period to be blocked.
-     * @param int surroundingHours
-     *   Number of hours to be allowed just before and after the blocked period.
+     *   Duration of the period to be blocked in hours.
      */
-    blockPeriod(n, surroundingHours=0) {
-	console.log('generic-optimizer.js: Searching for the most expensive ' + n + ' hour period...');
+    blockMostExpensivePeriod(n) {
+	console.log('generic-optimizer.js: Blocking the most expensive ' + n + ' hour period...');
+	const duration = time.Duration.ofHours(n);
 
-	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
-	if (this.prices.length < 2) {
-	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	// Early exit if prices are not available.
+	if (this.error) {
+	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
 	    return null;
 	}
 
 	// Early exit if not enough prices are available.
-	if (n > this.prices.length) {
-	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.prices.length + " hour");
+	if (time.Duration.ofHours(n).compareTo(this.priceWindowDuration) > 0) {
+	    this.error = true;
+	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.priceWindowDuration);
 	    return null;
 	}
 
-	// Ensure prices are sorted by datetime.
-	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
-
-	// Find the index when the period starts.
-	let startIndex = this.findPeriodStart(n, false);
-
-	// Allow the previous hours if they are available in the prices array.
-	if (surroundingHours) {
-	    for (let i = 1; i <= surroundingHours; i++) {
-		let j = startIndex - i;
-		if (j in this.prices) {
-		    this.prices[j]['control'] = 1;
-		}
-	    }
+	// Block the most expensive period.
+	let prices = this.calculatePeriodPrices(duration, 'desc');
+	if (prices.length > 0) {
+	    let start = time.toZDT(prices[0].datetime);
+	    this.setControlForPeriod(start, duration, 0);
 	}
-
-	// Block the hours of the period.
-	for (let i = startIndex; i < startIndex + n; i++) {
-	    this.prices[i]['control'] = 0;
-	}
-
-	// Allow the next hours if they are available in the prices array.
-	if (surroundingHours) {
-	    for (let i = 0; i < surroundingHours; i++) {
-		let j = startIndex + n + i;
-		if (j in this.prices) {
-		    this.prices[j]['control'] = 1;
-		}
-	    }
-	}
-
-	console.debug('generic-optimizer.js: Spot prices and control values');
-	console.debug(JSON.stringify(this.prices));
     }
 
     /**
-     * Allows all remaining hours that don't have a control value yet.
+     * Allows all remaining times that don't have a control value yet.
      */
-    allowRemainingHours() {
-	console.log("generic-optimizer.js: Allowing all remaining hours...");
+    allowAllRemaining() {
+	console.log("generic-optimizer.js: Allowing all remaining slots...");
 
-	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
-	if (this.prices.length < 2) {
-	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	// Early exit if prices are not available.
+	if (this.error) {
+	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
 	    return null;
 	}
 
@@ -236,14 +208,14 @@ class GenericOptimizer {
     }
 
     /**
-     * Blocks all remaining hours that don't have a control value yet.
+     * Blocks all remaining times that don't have a control value yet.
      */
-    blockRemainingHours() {
-	console.log("generic-optimizer.js: Blocking all remaining hours...");
+    blockAllRemaining() {
+	console.log("generic-optimizer.js: Blocking all remaining slots...");
 
-	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
-	if (this.prices.length < 2) {
-	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	// Early exit if prices are not available.
+	if (this.error) {
+	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
 	    return null;
 	}
 
@@ -256,69 +228,152 @@ class GenericOptimizer {
     }
 
     /**
-     * Finds the cheapest / most expensive period in this.prices and returns the index of
-     * the hour when this period starts.
+     * Allows or blocks a period of N hours starting at given datetime.
      *
-     * @param int n
-     *   Duration of the period to find.
-     * @param bool findCheapest
-     *   Set to true to find cheapest period (default) and false to find the most expensive period.
-     *
-     * @return int
-     *   Index of the hour when the period starts.
+     * @param ZonedDateTime start
+     *   Start of the period
+     * @param Duration duration
+     *   Duration of the period.
+     * @param int control
+     *   Control value to be set.
      */
-    findPeriodStart(n, findCheapest=true) {
-	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
-	if (this.prices.length < 2) {
-	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+    setControlForPeriod(start, duration, control) {
+	// Early exit if prices are not available.
+	if (this.error) {
+	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
 	    return null;
 	}
 
-	let bestSum = 0;
-	let startIndex = 0;
-    
+	// Calculate the end of the period.
+	let end = start.plus(duration);
+
 	// Ensure prices are sorted by datetime.
 	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
 
-	// Loop through the starting hours and calculate the sum for the period starting at that hour.
-	for (let i = 0; i <= this.prices.length - n; i++) {
-	    console.debug("generic-optimizer.js: Analyzing " + n + " hour period starting at index " + i);
-	    let controlFound = false;
-	    let sum = 0;
+	// Find the start index from the prices array.
+	let datetime = start.format(time.DateTimeFormatter.ISO_INSTANT);
+	let index = this.prices.findIndex(item => item.datetime == datetime);
+	if (index < 0) {
+	    console.error("generic-optimizer.js: Datetime " + datetime + " not found in prices array, unable to set control points!");
+	    return null;
+	}
 
-	    // Calculate the sum and bail out if a control value is already found within this period.
-	    for (let j = i; j < i + n; j++) {
-		if ("control" in this.prices[j]) {
-		    console.debug("generic-optimizer.js: Index " + j + " already has a control value.");
-		    controlFound = true;
-		    break;
-		}	    
-		sum += this.prices[j]['value'];
-	    }
+	// Set the control points for the period
+	let current = start;
 
-	    // Skip to next if a control value is found within currently investigated period.
-	    if (controlFound == true) {
-		continue;
+	while (current.isBefore(end)) {
+	    if (index in this.prices) {
+		this.prices[index]['control'] = control;
+		current = current.plus(this.resolution);
+		index++;
 	    }
-	
-	    // Set initial value for the bestSum after the first investigated period.
-	    if (i == 0) {
-		bestSum = sum;
-	    }
-
-	    // If the currently investigated period is better than the previously best,
-	    // use this as the new best period.
-	    if (findCheapest && sum < bestSum) {
-		bestSum = sum;
-		startIndex = i;
-	    }
-	    else if (!findCheapest && sum > bestSum) {
-		bestSum = sum;
-		startIndex = i;
+	    else {
+		console.debug("generic-optimizer.js: " + current + " not found in the prices array, skipping.");
+		break;
 	    }
 	}
-	console.log('generic-optimizer.js: Period starts at index: ' + startIndex + ', sum: ' + bestSum);
-	return startIndex; 
+	console.debug('generic-optimizer.js: Spot prices and control values:');
+	console.debug(JSON.stringify(this.prices));
+    }
+
+    /**
+     * Calculates the cumulative prices for all possible start times for a given duration.
+     *
+     * If a previous control point already exists, that period is not considered.
+     *
+     * @param Duration duration
+     *   Duration of the period to find.
+     * @param string sort
+     *   Sort the result 'asc' or 'desc'. Default 'asc'.
+     *
+     * @return array
+     *   Array of datetime-sum pairs.
+     */
+    calculatePeriodPrices(duration, sort='asc') {
+	// Early exit if prices are not available.
+	if (this.error) {
+	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
+	    return null;
+	}
+
+	// Ensure prices are sorted by datetime.
+	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
+
+	let periodPrices = [];
+	let iterationStart = this.priceStart;
+	let lastStart = this.priceEnd.minus(duration);
+	let i = 0;
+
+	// Calculate the sum for the period starting at each index.
+	while (iterationStart.isBefore(lastStart) || iterationStart.isEqual(lastStart)) {
+	    // console.debug("generic-optimizer.js: Analyzing period starting at " + iterationStart + " (index " + i + ")");
+
+	    let current = iterationStart;
+	    let iterationEnd = iterationStart.plus(duration);
+	    let j = i;
+	    let sum = 0;
+	    let controlFound = false;
+
+	    // Calculate the sum for the current iteration
+	    while (current.isBefore(iterationEnd)) {
+		// Break out if a control value is already found
+		if ("control" in this.prices[j]) {
+		    // console.debug("generic-optimizer.js: " + current + " already has a control value, period starting at " + iterationStart + " not considered.");
+		    controlFound = true;
+		    break;
+		}
+
+		sum += this.prices[j]['value'];
+		current = current.plus(this.resolution);
+		j++;
+	    }
+
+	    // If previous control points were not found, add sum of this period to the result array.
+	    if (controlFound == false) {
+		// console.debug("generic-optimizer.js: " + sum);
+		let point = {
+		    datetime: this.prices[i].datetime,
+		    sum: sum
+		}
+		periodPrices.push(point);
+	    }
+
+	    // Proceed to next iteration.
+	    iterationStart = iterationStart.plus(this.resolution);
+	    i++;
+	}
+
+	// Sort the prices array
+	if (sort == 'asc') {
+	    periodPrices.sort((a, b) => (a.sum > b.sum) ? 1 : -1);
+	}
+	else {
+	    periodPrices.sort((a, b) => (a.sum > b.sum) ? -1 : 1);
+	}
+	console.debug("generic-optimizer.js: Cumulative prices for unallocated periods...");
+	console.debug(JSON.stringify(periodPrices));
+	return periodPrices;
+    }
+
+    /**
+     * Rounds a Duration to be compatible with the resolution of the prices.
+     *
+     * If the resolution is PT60M, this method will round the source duration to the
+     * full hour. If the resolution is PT15M, the source duration will be rounded to
+     * the next quarter.
+     *
+     * @param Duration duration
+     *   Source duration.
+     *
+     * @return Duration
+     *   Rounded duration.
+     */
+    round(duration) {
+	let seconds = duration.get(time.ChronoUnit.SECONDS);
+	let resolution = this.resolution.get(time.ChronoUnit.SECONDS);
+	let n = Math.ceil(seconds / resolution);
+	let result = this.resolution.multipliedBy(n);
+	return result;
     }
 
     /**
@@ -329,9 +384,9 @@ class GenericOptimizer {
      * so that we remove the current values (spot prices) and renames the 'control' elements as 'values'.
      */
     getControlPoints() {
-	// Early exit if prices are not available. Countries on EET might have 1 hour from previous day.
-	if (this.prices.length < 2) {
-	    console.error("generic-optimizer.js: No prices available, aborting optimization!");
+	// Early exit if prices are not available.
+	if (this.error) {
+	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
 	    return null;
 	}
 
