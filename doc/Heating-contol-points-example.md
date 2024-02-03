@@ -24,9 +24,9 @@ The minimum number of hours between the two block periods is configurable.
 ## Create an Item 'HeatingHours'
 - In order to optimize the heating, our optimizing script needs to know how many hours the house needs to be heated. In the example above, there are 14 heating hours.
 - We don't want to hard code this number to our script, so let's create an Item `HeatingHours` which can easily be updated with an user interface widget or automatically with a separate Rule.
-- See a separate documentation page which shows how this Item can be updated based on the forecasted temperature. 
+- [See a separate documentation page which shows how this Item can be updated based on the forecasted temperature.](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Calculate-heating-need.md) 
 - The type of this Item must be Number.
-- [See example of a Control parameters page](./Control-parameters-UI-example.md)
+- [See an example of a Control parameters page which shows how this value can be easily changed](./UI-control-parameters.md)
   
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/84e5801f-b7df-492b-855e-37d18ef2e41b)
 
@@ -38,9 +38,9 @@ The minimum number of hours between the two block periods is configurable.
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/c5b64786-284d-4f17-a741-4f141ff5b1e2)
 
 ## Create an item 'HeatPumpCompressorControl'
-- The green bars in the example above are the _control points_ for when the heating should be on. These control points are calculated by the script below and stored to the Influx database as `HeatPumpCompressorControl`. So let's create an Item with this name.
+- The green bars in the example above are the _control points_ for when the heating should be on. These control points are calculated by the script below and stored to the Influx database as `HeatPumpCompressorControl`. So let's create an Item with this name so that we can display this in the Chart.
 - The type of this Item must be Number.
-- [See an example of control point visualization chart that renders control points with spot prices](./Control-point-visualization.md)
+- [See an example of control point visualization chart that renders control points with spot prices](./UI-chart-example.md)
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/e178a888-bd5c-42f2-845c-db5503ec87ee)
 
@@ -60,20 +60,29 @@ The minimum number of hours between the two block periods is configurable.
 
 ```Javascript
 // Load modules. Database connection parameters must be defined in config.js.
-DateHelper = require('openhab-spot-price-optimizer/date-helper.js');
 Influx = require('openhab-spot-price-optimizer/influx.js');
 PeakPeriodOptimizer = require('openhab-spot-price-optimizer/peak-period-optimizer.js');
 
 // Create objects.
-dh = new DateHelper.DateHelper();
 influx = new Influx.Influx();
-optimizer = new PeakPeriodOptimizer.PeakPeriodOptimizer();
+optimizer = new PeakPeriodOptimizer.PeakPeriodOptimizer('PT60M');
+
+//If the script is called after 14.00, optimize tomorrow. Otherwise optimize today.
+start = time.toZDT('00:00');
+if (time.toZDT().isBetweenTimes('14:00', '23:59')) {
+  start = start.plusDays(1);    
+}
+stop = start.plusDays(1);
 
 // Read spot prices from InfluxDB and pass them for the optimizer.
-start = dh.getMidnight('start');
-stop = dh.getMidnight('stop');
 prices = influx.getPoints('SpotPrice', start, stop);
 optimizer.setPrices(prices);
+
+// Read the control points of the previous day and pass them for the optimizer.
+previousDayStart = start.minusDays(1);
+previousDayStop = start;
+previousControlPoints = influx.getPoints('HeatPumpCompressorControl', previousDayStart, previousDayStop);
+optimizer.setPreviousControlPoints(previousControlPoints);
 
 // Read desired amount of heating hours from the HeatingHours item.
 heatingItem = items.getItem("HeatingHours");
@@ -83,9 +92,15 @@ heatingHours = Math.round(heatingItem.state);
 midItem = items.getItem("MidHeatingHours");
 midHeatingHours = Math.round(midItem.state);
 
-// Optimize the heating hours avoiding the peaks and write them to the database.
-optimizer.blockPeaks(heatingHours, midHeatingHours);
-optimizer.allowRemainingHours();
+// Define how many peaks you want to block. If you need to frequently change this, create an Item for this.
+peaks = 2;
+
+// Pass the optimization parameters to the optimizer.
+optimizer.setOptimizationParameters(heatingHours, midHeatingHours, peaks);
+
+// Optimize the heating hours: Block the peaks and allow remaining. Save results to the database.
+optimizer.blockPeaks();
+optimizer.allowAllRemaining();
 points = optimizer.getControlPoints();
 influx.writePoints('HeatPumpCompressorControl', points);
 ```
@@ -126,3 +141,12 @@ else {
   console.log("HeatPumpCompressor: No state change needed")
 }
 ```
+# Additional considerations about the Peak Period Optimizer
+The first thing the optimization algorighm will do is to check if the previous day ended with sufficient amount of heating hours. This is to handle situations where the previous day ends with a long period of blocked hours, the new day would be starting with a long period of blocked hours and as a result, the house would be cooling too much. The algorithm ensures that there is at least `MidHeatingHours` hours allowed when the day changes.
+
+After this, the algorithm checks if the optimization is mathematically possible with the given optimization parameters. If the `HeatingHours` would be 8, it would mean 16 hours would be blocked. If `MidHeatingHours` would be 4, the two block periods require 8 + 4 + 8 = 20 hours. There are still 4 ON hours required and this is just enough, but with slightly different otpimization parameters the ON and OFF hours might not fit to the available hours. If that would be the case, the optimization algorithm will abort the optimization (and write an error to logs).
+
+It is worth noting that the Peak Period Optimizer performs well when the number of heating hours is relativerly big. If you only need to find, say 5 hours like in the picture below, you might get results where the cheapest hours are not allowed. Mathematically the results in the example below are correct, the algorhitm has blocked two most expensive periods (9 and 10 hours). Conclusion: If the number of required ON hours is relatively small and you don't need to force the `midHeatingHours` between the OFF periods, [you might be better of using the algorithms provided by the Generic Optimizer.](./Boiler-control-points-example.md)
+
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/ccd72053-eb6f-4182-90a9-b1e7f024cc1a)
+
