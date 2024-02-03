@@ -26,7 +26,7 @@ class Influx {
 	let stop = start.plusHours(1);
 
 	let points = this.getPoints(measurement, start, stop);
-	if (points && points.length) {
+	if (points && points.length > 1) {
 	    const control = points[0].value;
 	    console.log('influx.js: Current control for ' + measurement + ': ' + control);
 	    return control;
@@ -75,14 +75,15 @@ class Influx {
 	console.debug('influx.js: Flux query: ' + fluxQuery);
 
 	let response = '';
+	let points = [];
+
 	try {
 	    response = http.sendHttpPostRequest(url, 'application/json', fluxQuery, headers, 5000);
-	    // console.debug('influx.js: Points read from the database.');
+	    points = this.parseCSV(response, 5, 6);
 	}
 	catch (exception) {
 	    console.error('influx.js: Exception reading points from the database: ' + exception.message);
 	}
-	let points = this.parseCSV(response, 5, 6);
 	return points;
     }
 
