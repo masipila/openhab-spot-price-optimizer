@@ -21,9 +21,9 @@ openHAB Spot Price Optimizer helps you to optimize energy consumption to the che
 
 Spot priced electricity contract means that the price of electricity is different for every hour of the day. The day-ahead prices for most European countries are published at around 13.15 CET/CEST on the [Entso-E Transparency Platform](https://transparency.entsoe.eu).
 
-This solution helps to automatically schedule and optimize the consumption of electricity to the cheapest hours of the next day. The concept is referred as [_demand response_](https://en.wikipedia.org/wiki/Demand_response) in electrical grid. If your electricity contract is based on spot prices, you can [save significant amount of money using home automation](https://community.openhab.org/t/thread-for-discussing-money-saved-with-openhab/146588). 
+This solution helps to automatically schedule and optimize the consumption of electricity to the cheapest hours. The concept is referred as [_demand response_](https://en.wikipedia.org/wiki/Demand_response) in electrical grid. If your electricity contract is based on spot prices, you can [save significant amount of money using this solution](https://community.openhab.org/t/thread-for-discussing-money-saved-with-openhab/146588). 
 
-The solution can be applied for a variety of devices that you can contorl via openHAB, including heating of your house, heating the domestic hot water with a water boiler, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to be ON or OFF (or have its other kind of state changed). The picutre below illustrate two use cases: heating the domestic hot water (red bars) in the night and heating of a house (yellow bars).
+The solution can be applied for a variety of devices, including heating of your house, heating the domestic hot water with a water boiler, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to be ON or OFF (or have its other kind of state changed). The picutre below illustrate two use cases: heating the domestic hot water (red bars) in the night and heating of a house (yellow bars).
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/88b75db8-e4c5-4d95-86e6-31cdb36b07c1)
 
@@ -31,6 +31,7 @@ The blue area represents the hourly spot prices of electricity. The red bars are
 
 # How to control your devices via openHAB
 The openhab-spot-price-optimizer scripts can be used with all kinds of devices, as long as you can control them using openHAB.
+- If you are planning to run openHAB on a Raspberry Pi, [it is recommended to use the openHABian image](https://www.openhab.org/docs/installation/openhabian.html).
 - [openHAB has Bindings available for many different devices](https://www.openhab.org/addons/#binding).
 - If you are new to openHAB, it is recommended to [learn the key concepts of Things, Items and Channels first](https://www.openhab.org/docs/concepts/#things-channels-bindings-items-and-links).
 
@@ -65,7 +66,7 @@ The spot prices are read from the Entso-E Transparency Platform API.
 ## Test InfluxDB persistence with your Items
 - The step-by-step examples above created two Items, `HeatPumpCompressor` and `BoilerPower`. Toggle your switch Item on/off for a couple of times. 
 - Log in to your Influx DB Data Explorer and verify that you are able to see the Item state changes that openHAB persistence layer has written there.
-- Influx Data Explorer can be access with a web browser from the port 8086 of your InfuxDB server, see a screenshot below.
+- Influx Data Explorer can be accessed with a web browser from the port 8086 of your InfuxDB server, see a screenshot below.
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/911c5c68-0d8f-4a7c-adc7-9f537f386ac8)
 
@@ -107,7 +108,7 @@ The spot prices are read from the Entso-E Transparency Platform API.
 When controlling real-world devices, it is more than healthy to consider what can go wrong and what happens when (not if) that happens. [Read more on failsafe considerations](https://github.com/masipila/openhab-spot-price-optimizer/blob/main/doc/Failsafe-considerations.md).
 
 ## Remote access
-If you run openHAB at your home network, it's quite nice to to be able to access it remotely with mobile phone. Exposing your openHAB directly to public internet is a Bad Idea (TM) as it will be under continuous attacks in a matter of minutes or a couple of hours. To securely use your openHAB remotely, I can warmly recommend using [Tailscale VPN](https://tailscale.com/), which is free for personal use and super simple to install.  
+If you run openHAB at your home network, it's quite nice to to be able to access it remotely with mobile phone. Exposing your openHAB directly to public internet is a Bad Idea (TM) as it will be under continuous attacks in a matter of minutes. To securely use your openHAB remotely, I can warmly recommend using [Tailscale VPN](https://tailscale.com/), which is free for personal use and super simple to install.  
 
 # About the author
 openhab-spot-price-optimizer is developed by [Markus Sipilä](https://fi.linkedin.com/in/markussipila). Publishing this solution as open source is my small contribution to fight the climate crisis. As the share of wind and solar power increase, the importance of _demand response_ becomes increasingly important. Demand response means shifting demand of electricity to times when there is plenty of electricity available or when the other demand is lower. `openhab-spot-price-optimizer` helps normal households to do exactly this and save money.
@@ -115,4 +116,4 @@ openhab-spot-price-optimizer is developed by [Markus Sipilä](https://fi.linkedi
 # Community and support
 You are more than welcome to join the discussion around this solution on the [openHAB community forum](https://community.openhab.org/t/control-a-water-heater-and-ground-source-heat-pump-based-on-cheap-hours-of-spot-priced-electricity/136566).
 
-Support requests to the community forum, please, not to the issues of this github repo. I have spent a beer (or three) writing these instructions so that they would be as complete as possible. I kindly ask you to respect this effort and read this documentation once more before asking for support on the community forum. This request does not mean that you would not be welcome to the community discussions, quite the contradictory. It simply means that most problems can be fixed by double checking that your implementation follows the documentation.
+Support requests to the community forum, please, not to the issues of this github repo. I have spent a beer (or three) writing these instructions so that they would be as complete as possible. I kindly ask you to respect this effort and read this documentation once more before asking for support on the community forum. This request does not mean that you would not be welcome to the community discussions, quite the contrary. It simply means that most problems can be fixed by double checking that your implementation follows the documentation and checking your logs.
