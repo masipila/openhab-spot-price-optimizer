@@ -5,8 +5,12 @@ class TariffCalculator {
 
     /**
      * Constructor.
+     *
+     * @param string resolution
+     *   Resolution of the time series to be used.
      */
-    constructor() {
+    constructor(resolution = 'PT15M') {
+	this.resolution = time.Duration.parse(resolution);
     }
 
     /**
@@ -51,7 +55,7 @@ class TariffCalculator {
                 value: price
 	    }
 	    points.push(point);
-	    current = current.plusHours(1);
+	    current = current.plus(this.resolution);
 	}
 
 	console.debug(JSON.stringify(points));
