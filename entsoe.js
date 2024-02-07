@@ -32,8 +32,13 @@ class Entsoe {
 	    return null;
 	}
 
+	let points = [];
 	const response = this.makeApiCall(start, end);
-	const points = this.parseResponse(response, tax);
+	if (response == null) {
+	    console.error("entsoe.js: Unexepcted / no response fom Entso-E API!");
+	    return points;
+	}
+	points = this.parseResponse(response, tax);
 	return points;
     }
 
@@ -96,8 +101,8 @@ class Entsoe {
 	    json = JSON.parse(transformation.transform('XSLT', 'xml2json.xsl', response));
 	}
 	catch (exception) {
-	    console.error('entsoe.js: Error while transforming XML to JSON! Is xml2json.xsl present?');
-	    console.error(exception);
+	    console.error("entsoe.js: Error while transforming XML to JSON! Is xml2json.xsl present?");
+	    console.error(response);
 	    return prices;
 	}
     
@@ -162,7 +167,6 @@ class Entsoe {
 	let start = time.toZDT(timeSeries['Period']['timeInterval']['start']);
 	let resolution = time.Duration.parse(timeSeries['Period']['resolution']);
 	console.log("entsoe.js: Time series start: " + start + ", resolution: " + resolution);
-
 	// Loop through spot prices. Convert EUR / MWh to c / kWh and add tax.
 	let points = timeSeries['Period']['Point'];
 	for (let i = 0; i < points.length; i++) {
@@ -176,6 +180,21 @@ class Entsoe {
 	    };
 	    prices.push(point);
 	    console.debug('entsoe.js: ' + datetime + ' ' + price + ' c/kWh');
+
+	    // If Entso provided data with 60 minute resolution, generate the
+	    // entries for every 15 minutes.
+	    if (timeSeries['Period']['resolution'] == 'PT60M') {
+		for (let j = 1; j < 4; j++) {
+		    current = current.plus(time.Duration.parse('PT15M'));
+		    datetime = current.format(time.DateTimeFormatter.ISO_INSTANT);
+		    point = {
+			datetime: datetime,
+			value: price
+		    };
+		    prices.push(point);
+		    console.debug('entsoe.js: ' + datetime + ' ' + price + ' c/kWh');
+		}
+	    }
 	}
 	return prices;
     }
