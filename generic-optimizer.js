@@ -7,9 +7,9 @@ class GenericOptimizer {
      * Constructor.
      *
      * @param string resolution
-     *   Resolution of the spot price time series, e.g. 'PT60M' for 60 mins.
+     *   Resolution of the spot price time series.
      */
-    constructor(resolution='PT60M') {
+    constructor(resolution = 'PT15M') {
 	this.prices = [];
 	this.resolution = time.Duration.parse(resolution);
 	this.error = false;
@@ -295,7 +295,6 @@ class GenericOptimizer {
 	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
 	    return null;
 	}
-
 	// Ensure prices are sorted by datetime.
 	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
 
@@ -307,15 +306,22 @@ class GenericOptimizer {
 	// Calculate the sum for the period starting at each index.
 	while (iterationStart.isBefore(lastStart) || iterationStart.isEqual(lastStart)) {
 	    // console.debug("generic-optimizer.js: Analyzing period starting at " + iterationStart + " (index " + i + ")");
-
 	    let current = iterationStart;
 	    let iterationEnd = iterationStart.plus(duration);
+
 	    let j = i;
 	    let sum = 0;
 	    let controlFound = false;
 
 	    // Calculate the sum for the current iteration
 	    while (current.isBefore(iterationEnd)) {
+		// Break out if prices array does not have enough values (might happen on time zones other than CET)
+		if (!j in this.prices) {
+		    console.log("element " + j + " not found in prices array!");
+		    controlFound = true;
+		    break;
+		}
+
 		// Break out if a control value is already found
 		if ("control" in this.prices[j]) {
 		    // console.debug("generic-optimizer.js: " + current + " already has a control value, period starting at " + iterationStart + " not considered.");
