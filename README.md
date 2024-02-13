@@ -18,19 +18,19 @@
 This solution is currently approaching for the first stable release. As long as you can see this disclaimer in the README, consider the solution being unstable, meaning non-backwards compatible API changes can still occurr.
 
 # Introduction
-openHAB Spot Price Optimizer helps you to optimize energy consumption to the cheapest hours of the day using openHAB home automation system.
+openHAB Spot Price Optimizer helps you to optimize energy consumption to the cheapest times of the day using openHAB home automation system.
 
-**Disclaimer**: This solution is provided as an inspiration for other openHAB community members. I disclaim all warranties and responsibilities if you use this solution. In no event shall I be liable for any direct or indirect damages resulting of use this solution. If your setup involves high voltage connections, they must always be designed and done by an authorized electrician.
+**Disclaimer**: This solution is provided as an inspiration for other openHAB community members. I disclaim all warranties and responsibilities if you use this solution. In no event shall I be liable for any direct or indirect damages resulting of use this solution. See the license for further terms. If your setup involves high voltage connections, they must always be designed and done by an authorized electrician.
 
 Spot priced electricity contract means that the price of electricity is different for every hour of the day. The day-ahead prices for most European countries are published at around 13.15 CET/CEST on the [Entso-E Transparency Platform](https://transparency.entsoe.eu).
 
 This solution helps to automatically schedule and optimize the consumption of electricity to the cheapest hours. The concept is referred as [_demand response_](https://en.wikipedia.org/wiki/Demand_response) in electrical grid. If your electricity contract is based on spot prices, you can [save significant amount of money using this solution](https://community.openhab.org/t/thread-for-discussing-money-saved-with-openhab/146588). 
 
-The solution can be applied for a variety of devices, including heating of your house, heating the domestic hot water with a water boiler, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to be ON or OFF (or have its other kind of state changed). The picutre below illustrate two use cases: heating the domestic hot water (red bars) in the night and heating of a house (yellow bars).
+The solution can be applied for a variety of devices, including heating of your house, heating the domestic hot water with a water boiler, charging an electric vehicle or heating the water of a swimming pool. The key concept is to calculate _control points_ for the next day, which define when the device is expected to be ON or OFF (or have its other kind of state changed). The picutre below illustrate two use cases: heating the domestic hot water and heating of a house.
 
-![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/88b75db8-e4c5-4d95-86e6-31cdb36b07c1)
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/879e3ac7-a155-42c9-8402-175ad990087b)
 
-The blue area represents the hourly spot prices of electricity. The red bars are the _control points_ for heating the domestic hot water in a boiler during the two cheapest hours of the night. The yellow bars are the _control points_ when the compressor of a ground source heat pump is allowed to run and heat the house. On this example day, 14 hours of heating is distributed so that the morning and evening price peaks are avoided.
+The blue area represents the hourly spot prices of electricity. The red bars are the _control points_ for heating the domestic hot water in a boiler during the two cheapest hours of the day. The yellow bars are the _control points_ that control when the heating of a house is ON. On this example day, 14 hours of heating is distributed so that the morning and evening price peaks are avoided.
 
 # How to control your devices via openHAB
 The openhab-spot-price-optimizer scripts can be used with all kinds of devices, as long as you can control them using openHAB.
