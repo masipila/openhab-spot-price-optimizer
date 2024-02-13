@@ -14,6 +14,9 @@
 - [About the author](#about-the-author)
 - [Community and support](#community-and-support)
 
+# Maturity of the solution
+This solution is currently approaching for the first stable release. As long as you can see this disclaimer in the README, consider the solution being unstable, meaning non-backwards compatible API changes can still occurr.
+
 # Introduction
 openHAB Spot Price Optimizer helps you to optimize energy consumption to the cheapest hours of the day using openHAB home automation system.
 
