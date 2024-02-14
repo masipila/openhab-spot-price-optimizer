@@ -15,18 +15,20 @@ class Influx {
      *
      * @param string measurement
      *   Name of the Influx measurement.
+     * @param string resolutionString
+     *   Resolution of the time series data, e.g. 'PT15M'
      *
      * @return int
      *   If no control is found, defaults to 1 as a failsafe.
      */
-    getCurrentControl(measurement) {
+    getCurrentControl(measurement, resolutionString='PT15M') {
 	console.log('influx.js: Getting the current control value for ' + measurement + '...');
-
-	let start = time.toZDT().withMinute(0).withSecond(0).withNano(0);
-	let stop = start.plusHours(1);
+	const resolution = time.Duration.parse(resolutionString);
+	const start = this.getCurrentTimeRoundedDown(resolution);
+	const stop = start.plus(resolution);
 
 	let points = this.getPoints(measurement, start, stop);
-	if (points && points.length > 1) {
+	if (points && points.length > 0) {
 	    const control = points[0].value;
 	    console.log('influx.js: Current control for ' + measurement + ': ' + control);
 	    return control;
@@ -35,6 +37,24 @@ class Influx {
 	    console.error('influx.js: Current control not found for ' + measurement + ', defaulting to 1!');
 	    return 1;
 	}
+    }
+
+    /**
+     * Returns the current time, rounded down to the previous quarter / full hour.
+     *
+     * @param Duration resolution
+     *   Resolution of the time series.
+     *
+     * @return ZonedDateTime
+     */
+    getCurrentTimeRoundedDown(resolution) {
+	const now = time.toZDT().withSecond(0).withNano(0);
+	const fullHour = time.toZDT().withMinute(0).withSecond(0).withNano(0);
+	const diffSeconds = time.ChronoUnit.SECONDS.between(fullHour, now);
+	const resolutionSeconds = resolution.get(time.ChronoUnit.SECONDS);
+	const n = Math.floor(diffSeconds / resolutionSeconds);
+	const result = fullHour.plus(resolution.multipliedBy(n));
+	return result;
     }
 
     /**
@@ -84,6 +104,7 @@ class Influx {
 	else {
 	    console.error('influx.js: Exception reading points for ' + measurement + ' from the database!');
 	}
+
 	return points;
     }
 
@@ -211,6 +232,7 @@ class Influx {
 	    console.error('influx.js: Exception deleting points. Measurement: ' + measurement + '. Range: ' + start + ' - ' + stop + '. Exception: ' + exception.message);
 	}
     }
+
 }
 
 /**
