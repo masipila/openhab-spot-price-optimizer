@@ -77,12 +77,12 @@ class Influx {
 	let response = '';
 	let points = [];
 
-	try {
-	    response = http.sendHttpPostRequest(url, 'application/json', fluxQuery, headers, 5000);
+	response = http.sendHttpPostRequest(url, 'application/json', fluxQuery, headers, 5000);
+	if (response != null) {
 	    points = this.parseCSV(response, 5, 6);
 	}
-	catch (exception) {
-	    console.error('influx.js: Exception reading points from the database: ' + exception.message);
+	else {
+	    console.error('influx.js: Exception reading points for ' + measurement + ' from the database!');
 	}
 	return points;
     }
