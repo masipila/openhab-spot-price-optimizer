@@ -51,7 +51,7 @@ GenericOptimizer = require('openhab-spot-price-optimizer/generic-optimizer.js');
 
 // Create objects.
 influx = new Influx.Influx();
-optimizer = new GenericOptimizer.GenericOptimizer('PT60M');
+optimizer = new GenericOptimizer.GenericOptimizer('PT15M');
 
 //If the script is called after 14.00, optimize tomorrow. Otherwise optimize today.
 start = time.toZDT('00:00');
