@@ -1,7 +1,7 @@
 # PeakPeriodOptimizer usage example: Optimizing heating of the house
 This documenation page gives an example how to use the `PeakPeriodOptimizer` class of the `openhab-spot-price-optimizer` to optimize the heating of a house.
 
-![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/7dac0260-be96-4f6b-ad1c-f3ea1174136c)
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/4459aa1e-9524-4b95-83c5-a11007781d64)
 
 The picture above illustrates how the heating of a house is optimized so that the morning and evening spot price peaks are avoided. In order to optimize the heating of a house, we first tell the optimizing algorithm how many heating hours are needed. The yellow bars in the picture above represent the 14 hours when heating is allowed to be ON.
 
@@ -11,7 +11,7 @@ Optimizing the heating has also other objectives than just finding the cheapest 
 - The 10 hours are divided into two periods, 5 hours each.
 - The algorithm searches two most expensive 5 hours price peaks and blocks them.
 
-The minimum number of hours between the block periods is configurable. The number of periods to block is configurable.
+The minimum number of hours between the block periods is configurable with an Item `MidHeatingHours`. The number of periods to block is configurable with an Item `HeatingPeaks`.
 
 # Pre-requisites
 - The heating system can be controlled with an openHAB Item.
@@ -120,9 +120,11 @@ influx.writePoints('HeatPumpCompressorControl', points);
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/0673a039-5f15-4eac-9864-fa7904ea5b40)
 
-# Create a Rule 'HeatPumpCompressorHourly' to toggle the compressor ON and OFF
-- This rule will run every full hour and turn the compressor ON or OFF based on the control point of that hour
-- If the compressor is currently OFF and the control point for the new hour is 1, the compressor will be turned ON and vice versa.
+# Create a Rule 'HeatPumpCompressorController' to toggle the compressor ON and OFF
+- This rule will run every 15 minutes and turn the compressor ON or OFF based on the current control point
+- If the compressor is currently OFF and the current control point is 1, the compressor will be turned ON and vice versa.
+
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/10146a9b-20ae-497d-a623-19f42064b170)
 
 ## Inline script action for the rule
 ```Javascript
@@ -149,6 +151,7 @@ else {
   console.log("HeatPumpCompressor: No state change needed")
 }
 ```
+
 # Additional considerations about the Peak Period Optimizer
 The first thing the optimization algorighm will do is to check if the previous day ended with sufficient amount of heating hours. This is to handle situations where the previous day ends with a long period of blocked hours, the new day would be starting with a long period of blocked hours and as a result, the house would be cooling too much. The algorithm ensures that there is at least `MidHeatingHours` hours allowed when the day changes.
 
