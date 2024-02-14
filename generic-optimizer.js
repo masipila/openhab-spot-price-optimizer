@@ -41,8 +41,7 @@ class GenericOptimizer {
 	this.priceEnd = time.toZDT(this.prices[this.prices.length - 1].datetime).plus(this.resolution);
 	this.priceWindowDuration = time.Duration.between(this.priceStart, this.priceEnd);
 
-	console.debug("generic-optimizer.js: prices start at " + this.priceStart);
-	console.debug("generic-optimizer.js: prices end at " + this.priceEnd);
+	console.log("generic-optimizer.js: price window " + this.priceStart + " - " + this.priceEnd);
 	console.debug("generic-optimizer.js: price window duration: " + this.priceWindowDuration);
 	console.debug(JSON.stringify(this.prices));
     }
