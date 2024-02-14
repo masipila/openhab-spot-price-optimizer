@@ -93,11 +93,11 @@ optimizer.setPreviousControlPoints(previousControlPoints);
 
 // Read desired amount of heating hours from the HeatingHours item.
 heatingItem = items.getItem("HeatingHours");
-heatingHours = Math.round(heatingItem.state);
+heatingHours = heatingItem.state;
 
 // Read the minimum amount of hours between the blocked periods from the MidHeatingHours item.
 midItem = items.getItem("MidHeatingHours");
-midHeatingHours = Math.round(midItem.state);
+midHeatingHours = midItem.state;
 
 // Define how many peaks you want to block. If you need to frequently change this, create an Item for this.
 peaksItem = items.getItem("HeatingPeaks");
