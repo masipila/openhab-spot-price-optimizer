@@ -91,11 +91,11 @@ The `GenericOptimizer` optimizing class provides has the following functions:
 
 ![fetch-spot-price-execute-boiler-optimization](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/3a296b16-2b64-40f6-9d49-edc1db59be41)
 
-# Create a Rule 'BoilerHourly' to toggle the boiler ON and OFF
-- This rule will run every full hour and turn the boiler ON or OFF based on the control point of that hour
-- If the boiler is currently OFF and the control point for the new hour is 1, the boiler will be turned ON and vice versa.
+# Create a Rule 'BoilerController' to toggle the boiler ON and OFF
+- This rule will run every 15 minutes and turn the boiler ON or OFF based on the current control point
+- If the boiler is currently OFF and the current control point is 1, the boiler will be turned ON and vice versa.
 
-![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/bfbe2dc8-4d6f-4d34-b4de-a4866453c645)
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/662c6716-6189-451c-971e-2fa081a87136)
 
 ## Inline script action for the rule
 ```Javascript
@@ -122,6 +122,7 @@ else {
   console.log("BoilerPower: No state change needed")  
 }
 ```
+
 # Script for deleting control points
 When developing your solution and experimenting, you might want to delete points from your Influx database. The script below can be used for that.
 
