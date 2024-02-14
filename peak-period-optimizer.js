@@ -26,7 +26,7 @@ class PeakPeriodOptimizer extends GenericOptimizer.GenericOptimizer {
     /**
      * Sets optimization parameters.
      *
-     * @param int onDuration
+     * @param float onDuration
      *   Number or ON hours
      * @param Duration midDuration
      *   Minimum duration between the blocked periods.
@@ -39,11 +39,10 @@ class PeakPeriodOptimizer extends GenericOptimizer.GenericOptimizer {
 	    console.error("peak-period-optimizer.js: Aborting optimization, see previous errors.");
 	    return null;
 	}
-
-	this.onDuration = time.Duration.ofHours(onDuration);
-	this.midDuration = time.Duration.ofHours(midDuration);
+	this.onDuration = this.round(time.Duration.ofMinutes(Math.round(onDuration * 60)));
+	this.midDuration = this.round(time.Duration.ofMinutes(Math.round(midDuration * 60)));
 	this.peaks = peaks;
-	this.offDuration = time.Duration.between(this.priceStart, this.priceEnd).minus(this.onDuration);
+	this.offDuration = this.priceWindowDuration.minus(this.onDuration);
 	console.log("peak-period-optimizer.js: Optimization parameters: ON duration: " + this.onDuration + ", OFF duration: " + this.offDuration + ", mid duration: " + this.midDuration + ", number of peaks to block: " + this.peaks);
 
 	// Check if the beginning of the day must be forced ON
