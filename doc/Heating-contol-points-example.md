@@ -1,9 +1,9 @@
 # PeakPeriodOptimizer usage example: Optimizing heating of the house
 This documenation page gives an example how to use the `PeakPeriodOptimizer` class of the `openhab-spot-price-optimizer` to optimize the heating of a house.
 
-![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/3538f84b-c09b-432d-a22a-d2208a882c68)
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/4459aa1e-9524-4b95-83c5-a11007781d64)
 
-The picture above illustrates how the heating of a house is optimized so that the morning and evening spot price peaks are avoided. In order to optimize the heating of a house, we first tell the optimizing algorithm how many heating hours are needed. The 14 green bars in the picture above represent the hours when heating is allowed to be ON.
+The picture above illustrates how the heating of a house is optimized so that the morning and evening spot price peaks are avoided. In order to optimize the heating of a house, we first tell the optimizing algorithm how many heating hours are needed. The yellow bars in the picture above represent the 14 hours when heating is allowed to be ON.
 
 Optimizing the heating has also other objectives than just finding the cheapest hours of the day because the house may cool down too much if there are too many hours without heating. The idea of the `PeakPeriodOptimizer` algorithm is to block the most expensive price peaks and allow the rest. In the example above:
 - 14 hours of heating is needed
@@ -11,7 +11,7 @@ Optimizing the heating has also other objectives than just finding the cheapest 
 - The 10 hours are divided into two periods, 5 hours each.
 - The algorithm searches two most expensive 5 hours price peaks and blocks them.
 
-The minimum number of hours between the two block periods is configurable.
+The minimum number of hours between the block periods is configurable with an Item `MidHeatingHours`. The number of periods to block is configurable with an Item `HeatingPeaks`.
 
 # Pre-requisites
 - The heating system can be controlled with an openHAB Item.
@@ -19,7 +19,7 @@ The minimum number of hours between the two block periods is configurable.
 - Fetching of spot prices is working
   - [See an example of how to fetch spot prices from Entso-E API](./Entso-E-example.md)
  
-# Create three new Items
+# Create four new Items
 
 ## Create an Item 'HeatingHours'
 - In order to optimize the heating, our optimizing script needs to know how many hours the house needs to be heated. In the example above, there are 14 heating hours.
@@ -37,6 +37,13 @@ The minimum number of hours between the two block periods is configurable.
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/c5b64786-284d-4f17-a741-4f141ff5b1e2)
 
+## Create an Item 'HeatingPeaks'
+- In the example above, two most expensive peaks are blocked.
+- The number of expensive peaks the optimizing algorithm will search and block is configurable.
+- Create a new Item `HeatingPeaks` which can easily be updated with an user interface widget or automatically with a separate Rule.
+
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/084b822b-747e-4f4d-9905-8f77a6b8f666)
+
 ## Create an item 'HeatPumpCompressorControl'
 - The green bars in the example above are the _control points_ for when the heating should be on. These control points are calculated by the script below and stored to the Influx database as `HeatPumpCompressorControl`. So let's create an Item with this name so that we can display this in the Chart.
 - The type of this Item must be Number.
@@ -47,10 +54,10 @@ The minimum number of hours between the two block periods is configurable.
 # Create a Rule 'HeatPumpCompressorOptimizer' to calculate the control points
 - This rule will create the _control points_ for each hour of the day
 - Control point value 1 means the heating will be ON during that hour and value 0 means that heating will be OFF during that hour.
-- This Rule will be triggered whenever the Items `HeatingHours` or `MidHeatingHours` change.
+- This Rule will be triggered whenever the Items `HeatingHours`, `MidHeatingHours` or `HeatingPeaks` change.
 - We will also modify the `FetchSpotPrices` rule so that this rule will be invoked right after the spot prices have been fetched, see below.
 
-![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/c5b7efba-9c78-4376-bd1e-2abda65173d1)
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/0827d45d-cbfc-4045-8eac-6c0e61c612e6)
 
 ## Inline script action for the rule
 - The following rule first reads the SpotPrice values from midnight to midnight
@@ -65,7 +72,7 @@ PeakPeriodOptimizer = require('openhab-spot-price-optimizer/peak-period-optimize
 
 // Create objects.
 influx = new Influx.Influx();
-optimizer = new PeakPeriodOptimizer.PeakPeriodOptimizer('PT60M');
+optimizer = new PeakPeriodOptimizer.PeakPeriodOptimizer('PT15M');
 
 //If the script is called after 14.00, optimize tomorrow. Otherwise optimize today.
 start = time.toZDT('00:00');
@@ -93,7 +100,8 @@ midItem = items.getItem("MidHeatingHours");
 midHeatingHours = Math.round(midItem.state);
 
 // Define how many peaks you want to block. If you need to frequently change this, create an Item for this.
-peaks = 2;
+peaksItem = items.getItem("HeatingPeaks");
+peaks = Math.round(peaksItem.state);
 
 // Pass the optimization parameters to the optimizer.
 optimizer.setOptimizationParameters(heatingHours, midHeatingHours, peaks);
@@ -106,15 +114,17 @@ influx.writePoints('HeatPumpCompressorControl', points);
 ```
 
 ## Invoke this Rule also after the spot prices have been fetched
-- The rule was defined to be run every time after the item `HeatingHours` changes. But what if this value is kept unchanged day after a day?
+- The rule was defined to be run every time after the item `HeatingHours`, `MidHeatingHours` or `HeatingPeaks` changes. But what if these values remaing unchanged day after a day?
 - The solution is to modify the previously created `FetchSpotPrices` Rule so that we execute the `HeatPumpCompressorOptimizer` Rule as an additional action immediately after the spot prices have been fetched.
 - Go to edit the previously created `FetchSpotPrices` Rule and add the action as illustrated in the picture below.
 
 ![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/0673a039-5f15-4eac-9864-fa7904ea5b40)
 
-# Create a Rule 'HeatPumpCompressorHourly' to toggle the compressor ON and OFF
-- This rule will run every full hour and turn the compressor ON or OFF based on the control point of that hour
-- If the compressor is currently OFF and the control point for the new hour is 1, the compressor will be turned ON and vice versa.
+# Create a Rule 'HeatPumpCompressorController' to toggle the compressor ON and OFF
+- This rule will run every 15 minutes and turn the compressor ON or OFF based on the current control point
+- If the compressor is currently OFF and the current control point is 1, the compressor will be turned ON and vice versa.
+
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/10146a9b-20ae-497d-a623-19f42064b170)
 
 ## Inline script action for the rule
 ```Javascript
@@ -141,6 +151,7 @@ else {
   console.log("HeatPumpCompressor: No state change needed")
 }
 ```
+
 # Additional considerations about the Peak Period Optimizer
 The first thing the optimization algorighm will do is to check if the previous day ended with sufficient amount of heating hours. This is to handle situations where the previous day ends with a long period of blocked hours, the new day would be starting with a long period of blocked hours and as a result, the house would be cooling too much. The algorithm ensures that there is at least `MidHeatingHours` hours allowed when the day changes.
 
