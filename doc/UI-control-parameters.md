@@ -6,13 +6,13 @@ The examples included two use cases for `openhab-spot-price-optimizer`:
 
 Both use cases involve _control parameters_ to define how many hours the optimization algorithm will search. This documentation page shows an example user interface which let you to adjust the values of these control parameter Items.
 
-![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/492f1dc7-6d12-444a-b49f-a58be5df8006)
+![image](https://github.com/masipila/openhab-spot-price-optimizer/assets/20110757/86b9c811-7344-4425-83c1-c5d5905d2b0d)
 
 # Create a new page
 To create a new page:
 - Go to settings and create a new layout page
 - Give a name to the page, for example _Control Parameters_ and make it visible in the sidebar
-- The openHAB user interface for configuring the page content may feel a bit confusing at the beginning, but we want to create
+- The openHAB user interface for configuring the page content may feel a bit confusing in the beginning, but we want to create
 -- A Block
 -- Which will contain a Row
 -- Which will contain a Column
@@ -65,6 +65,7 @@ blocks:
                         item: HeatingHours
                         max: 24
                         min: 0
+                        step: 0.25
                         title: Heating hours
         - component: oh-grid-row
           config: {}
@@ -77,12 +78,26 @@ blocks:
                     - component: oh-stepper-card
                       config:
                         item: MidHeatingHours
-                        max: 24
+                        max: 3
                         min: 0
+                        step: 0.25
                         title: Mid heating hours
+        - component: oh-grid-row
+          config: {}
+          slots:
+            default:
+              - component: oh-grid-col
+                config: {}
+                slots:
+                  default:
+                    - component: oh-stepper-card
+                      config:
+                        item: HeatingPeaks
+                        max: 5
+                        min: 0
+                        step: 1
+                        title: Number of peaks to block
 masonry: null
 grid: []
 canvas: []
 ```
-
-
