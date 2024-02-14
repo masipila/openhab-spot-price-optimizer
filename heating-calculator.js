@@ -58,8 +58,10 @@ class HeatingCalculator {
 	const b = p2.y - (k * p2.x);
 
 	console.log('heating-calculator.js: y = ' + k + 'x + ' + b);
+	let raw = k * temperature + b;
 
-	let y = Math.round(k * temperature + b);
+	// Round to nearest 0.25
+	let y = (Math.round(raw * 4) / 4).toFixed(2);
 	if (temperature < p1.x) {
 	    y = p1.y;
 	}
@@ -67,7 +69,7 @@ class HeatingCalculator {
 	    y = p2.y;
 	}
 
-	console.log('heating-calculator.js: Number of needed hours before temperature drop compensation: ' + y);
+	console.log('heating-calculator.js: Number of needed hours before compensations: ' + y);
 	return y;
     }
 
