@@ -39,6 +39,7 @@ class PeakPeriodOptimizer extends GenericOptimizer.GenericOptimizer {
 	    console.error("peak-period-optimizer.js: Aborting optimization, see previous errors.");
 	    return null;
 	}
+
 	this.onDuration = this.round(time.Duration.ofMinutes(Math.round(onDuration * 60)));
 	this.midDuration = this.round(time.Duration.ofMinutes(Math.round(midDuration * 60)));
 	this.peaks = peaks;
