@@ -42,6 +42,13 @@ class PeakPeriodOptimizer extends GenericOptimizer.GenericOptimizer {
 
 	this.onDuration = this.round(time.Duration.ofMinutes(Math.round(onDuration * 60)));
 	this.midDuration = this.round(time.Duration.ofMinutes(Math.round(midDuration * 60)));
+
+	// Adjust midDuration if it's longer than onDuration
+	if (this.midDuration.compareTo(this.onDuration) > 0) {
+	    console.log("peak-period-optimizer.js: midDuration adjusted to be equal to onDuration: " + this.onDuration);
+	    this.midDuration = this.onDuration;
+	}
+
 	this.peaks = peaks;
 	this.offDuration = this.priceWindowDuration.minus(this.onDuration);
 	console.log("peak-period-optimizer.js: Optimization parameters: ON duration: " + this.onDuration + ", OFF duration: " + this.offDuration + ", mid duration: " + this.midDuration + ", number of peaks to block: " + this.peaks);

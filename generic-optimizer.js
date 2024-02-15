@@ -294,10 +294,17 @@ class GenericOptimizer {
 	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
 	    return null;
 	}
+
+	let periodPrices = [];
+
+	// Early exit if duration is 0.
+	if (duration.isZero() == true) {
+	    return periodPrices;
+	}
+
 	// Ensure prices are sorted by datetime.
 	this.prices.sort((a, b) => (a.datetime > b.datetime) ? 1 : -1);
 
-	let periodPrices = [];
 	let iterationStart = this.priceStart;
 	let lastStart = this.priceEnd.minus(duration);
 	let i = 0;
