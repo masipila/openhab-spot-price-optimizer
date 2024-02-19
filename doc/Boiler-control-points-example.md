@@ -69,7 +69,7 @@ item = items.getItem("BoilerHours");
 hours = Math.round(item.state);
 
 // Optimize the control points and save them to the database.
-optimizer.allowCheapestPeriod(hours);
+optimizer.allowPeriod(hours);
 optimizer.blockAllRemaining();
 points = optimizer.getControlPoints();
 influx.writePoints('BoilerControl', points);
@@ -77,9 +77,9 @@ influx.writePoints('BoilerControl', points);
 
 The `GenericOptimizer` optimizing class provides has the following functions:
 - `allowIndividualHours(N)`: Finds N cheapest hours and allows them.
-- `allowCheapestPeriod(N)`: Finds the cheapest consequtive N hour period and allows them.
+- `allowPeriod(N)`: Finds the cheapest consequtive N hour period and allows it.
 - `blockIndividualHours(N)`: Finds N most expensive hours and blocks them.
-- `blockMostExpensivePeriod(N)`: Finds the most expensive consequtive N hour period and blocks them.
+- `blockPeriod(N)`: Finds the most expensive consequtive N hour period and blocks it.
 - `allowAllRemaining()`: Allows all remaining hours from the spot prices which have not been allowed or blocked yet.
 - `blockAllRemaining()`: Blocks all remaining hours from the spot prices which have not been allowed or blocked yet.
 - Note how the script above combines `allowIndividualHours` and `blockAllRemaining`. All hours must have a control value so the remaining hours need to be blocked after the cheapest ones have been allowed.
