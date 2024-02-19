@@ -57,7 +57,13 @@ class GenericOptimizer {
      */
     allowIndividualHours(n) {
 	console.log('generic-optimizer.js: Searching for ' + n + ' cheapest hours...');
-	const duration = time.Duration.ofHours(1);
+
+	// Early exit if input parameter is undefined.
+	if (n === undefined) {
+	    console.error("generic-optimizer.js: Aborting optimization, undefined input parameter!");
+	    this.error = true;
+	    return null;
+	}
 
 	// Early exit if prices are not available.
 	if (this.error) {
@@ -73,6 +79,8 @@ class GenericOptimizer {
 	}
 
 	// Allow n cheapest hours.
+	const duration = time.Duration.ofHours(1);
+
 	for (let i = 0; i < n; i++) {
 	    let prices = this.calculatePeriodPrices(duration, 'asc');
 	    if (prices.length > 0) {
@@ -93,7 +101,13 @@ class GenericOptimizer {
      */
     blockIndividualHours(n) {
 	console.log('generic-optimizer.js: Searching for ' + n + ' most expensive hours...');
-	const duration = time.Duration.ofHours(1);
+
+	// Early exit if input parameter is undefined.
+	if (n === undefined) {
+	    console.error("generic-optimizer.js: Aborting optimization, undefined input parameter!");
+	    this.error = true;
+	    return null;
+	}
 
 	// Early exit if prices are not available.
 	if (this.error) {
@@ -109,6 +123,8 @@ class GenericOptimizer {
 	}
 
 	// Allow n most expensive hours.
+	const duration = time.Duration.ofHours(1);
+
 	for (let i = 0; i < n; i++) {
 	    let prices = this.calculatePeriodPrices(duration, 'desc');
 	    if (prices.length > 0) {
@@ -127,9 +143,15 @@ class GenericOptimizer {
      * @param int n
      *   Duration of the period to be allowed in hours.
      */
-    allowCheapestPeriod(n) {
+    allowPeriod(n) {
 	console.log('generic-optimizer.js: Allowing the cheapest ' + n + ' hour period...');
-	const duration = time.Duration.ofHours(n);
+
+	// Early exit if input parameter is undefined.
+	if (n === undefined) {
+	    console.error("generic-optimizer.js: Aborting optimization, undefined input parameter!");
+	    this.error = true;
+	    return null;
+	}
 
 	// Early exit if prices are not available.
 	if (this.error) {
@@ -145,6 +167,7 @@ class GenericOptimizer {
 	}
 
 	// Allow the cheapest period.
+	const duration = time.Duration.ofHours(n);
 	let prices = this.calculatePeriodPrices(duration, 'asc');
 	if (prices.length > 0) {
 	    let start = time.toZDT(prices[0].datetime);
@@ -161,9 +184,15 @@ class GenericOptimizer {
      * @param int n
      *   Duration of the period to be blocked in hours.
      */
-    blockMostExpensivePeriod(n) {
+    blockPeriod(n) {
 	console.log('generic-optimizer.js: Blocking the most expensive ' + n + ' hour period...');
-	const duration = time.Duration.ofHours(n);
+
+	// Early exit if input parameter is undefined.
+	if (n === undefined) {
+	    console.error("generic-optimizer.js: Aborting optimization, undefined input parameter!");
+	    this.error = true;
+	    return null;
+	}
 
 	// Early exit if prices are not available.
 	if (this.error) {
@@ -179,6 +208,7 @@ class GenericOptimizer {
 	}
 
 	// Block the most expensive period.
+	const duration = time.Duration.ofHours(n);
 	let prices = this.calculatePeriodPrices(duration, 'desc');
 	if (prices.length > 0) {
 	    let start = time.toZDT(prices[0].datetime);

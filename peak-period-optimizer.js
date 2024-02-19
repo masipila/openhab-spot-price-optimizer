@@ -40,6 +40,13 @@ class PeakPeriodOptimizer extends GenericOptimizer.GenericOptimizer {
 	    return null;
 	}
 
+	// Early exit if some of the input parameters are undefined.
+	if (onDuration === undefined || midDuration === undefined || peaks === undefined) {
+	    console.error("peak-period-optimizer.js: Aborting optimization, undefined input parameter(s).");
+	    this.error = true;
+	    return null;
+	}
+
 	this.onDuration = this.round(time.Duration.ofMinutes(Math.round(onDuration * 60)));
 	this.midDuration = this.round(time.Duration.ofMinutes(Math.round(midDuration * 60)));
 
