@@ -140,11 +140,13 @@ class GenericOptimizer {
      * Input parameter is taken as a number (instead of a Duration) so that it's easy to
      * pass the value from an Item.
      *
-     * @param int n
+     * @param float n
      *   Duration of the period to be allowed in hours.
      */
     allowPeriod(n) {
-	console.log('generic-optimizer.js: Allowing the cheapest ' + n + ' hour period...');
+	// Convert hours (which can be a float) to a Duration.
+	const duration = this.round(time.Duration.ofMinutes(Math.round(n*60)));
+	console.log('generic-optimizer.js: Allowing the cheapest ' + duration + ' period...');
 
 	// Early exit if input parameter is undefined.
 	if (n === undefined) {
@@ -160,14 +162,13 @@ class GenericOptimizer {
 	}
 
 	// Early exit if not enough prices are available.
-	if (time.Duration.ofHours(n).compareTo(this.priceWindowDuration) > 0) {
+	if (duration.compareTo(this.priceWindowDuration) > 0) {
 	    this.error = true;
-	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.priceWindowDuration);
+	    console.error("generic-optimizer.js: Optimization aborted. " + duration + " requested but there are prices only for " + this.priceWindowDuration);
 	    return null;
 	}
 
 	// Allow the cheapest period.
-	const duration = time.Duration.ofHours(n);
 	let prices = this.calculatePeriodPrices(duration, 'asc');
 	if (prices.length > 0) {
 	    let start = time.toZDT(prices[0].datetime);
@@ -181,11 +182,13 @@ class GenericOptimizer {
      * Input parameter is taken as a number (instead of a Duration) so that it's easy to
      * pass the value from an Item.
      *
-     * @param int n
+     * @param float n
      *   Duration of the period to be blocked in hours.
      */
     blockPeriod(n) {
-	console.log('generic-optimizer.js: Blocking the most expensive ' + n + ' hour period...');
+	// Convert hours (which can be a float) to a Duration.
+	const duration = this.round(time.Duration.ofMinutes(Math.round(n*60)));
+	console.log('generic-optimizer.js: Blocking the most expensive ' + duration + ' hour period...');
 
 	// Early exit if input parameter is undefined.
 	if (n === undefined) {
@@ -201,14 +204,13 @@ class GenericOptimizer {
 	}
 
 	// Early exit if not enough prices are available.
-	if (time.Duration.ofHours(n).compareTo(this.priceWindowDuration) > 0) {
+	if (duration.compareTo(this.priceWindowDuration) > 0) {
 	    this.error = true;
 	    console.error("generic-optimizer.js: Optimization aborted. " + n + " hours requested but there are prices only for " + this.priceWindowDuration);
 	    return null;
 	}
 
 	// Block the most expensive period.
-	const duration = time.Duration.ofHours(n);
 	let prices = this.calculatePeriodPrices(duration, 'desc');
 	if (prices.length > 0) {
 	    let start = time.toZDT(prices[0].datetime);
@@ -319,13 +321,13 @@ class GenericOptimizer {
      *   Array of datetime-sum pairs.
      */
     calculatePeriodPrices(duration, sort='asc') {
+	let periodPrices = [];
+
 	// Early exit if prices are not available.
 	if (this.error) {
 	    console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
-	    return null;
+	    return periodPrices;
 	}
-
-	let periodPrices = [];
 
 	// Early exit if duration is 0.
 	if (duration.isZero() == true) {
