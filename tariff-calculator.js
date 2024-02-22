@@ -148,7 +148,7 @@ class TariffCalculator {
 	    let datetime = spotPrices[i].datetime;
 	    let spotPrice = spotPrices[i].value;
 	    let distributionPrice = distributionPrices.find(x => x.datetime === datetime).value;
-	    if (spotPrice && distributionPrice) {
+	    if (distributionPrice) {
 		let point = {
 		    datetime: datetime,
 		    value: parseFloat(spotPrice) + parseFloat(distributionPrice)
