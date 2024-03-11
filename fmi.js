@@ -21,7 +21,7 @@ class FMI {
     makeApiCall(place) {
 	const http = Java.type("org.openhab.core.model.script.actions.HTTP");
 	console.log('fmi.js: Making an API call to FMI API...');
-	const url = 'http://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::forecast::harmonie::surface::point::simple&place=' + place + '&parameters=Temperature,PrecipitationAmount,WindSpeedMS,TotalCloudCover';
+	const url = 'http://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::forecast::edited::weather::scandinavia::point::simple&place=' + place + '&parameters=Temperature,PrecipitationAmount,WindSpeedMS,TotalCloudCover';
 	const xml = http.sendHttpGetRequest(url, 10000);
 	console.debug('fmi.js: Response from FMI API');
 	console.debug(xml);
