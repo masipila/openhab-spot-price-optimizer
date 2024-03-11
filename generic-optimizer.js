@@ -285,7 +285,7 @@ class GenericOptimizer {
 	let datetime = start.format(time.DateTimeFormatter.ISO_INSTANT);
 	let index = this.prices.findIndex(item => item.datetime == datetime);
 	if (index < 0) {
-	    console.error("generic-optimizer.js: Datetime " + datetime + " not found in prices array, unable to set control points!");
+	    console.warn("generic-optimizer.js: Datetime " + datetime + " not found in prices array, unable to set control points!");
 	    return null;
 	}
 
