@@ -102,7 +102,7 @@ class TariffCalculator {
 	console.debug("tariff-calculator.js: Calculating fee for hour: " + zdt.toString());
 
 	// Summer price
-	if (zdt.monthValue() >= 4 && zdt.monthValue <= 10) {
+	if (zdt.monthValue() >= 4 && zdt.monthValue() <= 10) {
 	    console.debug("tariff-calculator.js: Summer");
 	    return (priceParams.price2+priceParams.tax).toFixed(2);
 	}
