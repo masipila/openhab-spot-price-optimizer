@@ -16,8 +16,8 @@ class HeatingCalculator {
      *   Array of datetime-value pairs.
      */
     setForecast(forecast) {
-	this.forecast = forecast;
-	console.debug(JSON.stringify(this.forecast));
+  this.forecast = forecast;
+  console.debug(JSON.stringify(this.forecast));
     }
 
     /**
@@ -33,44 +33,44 @@ class HeatingCalculator {
      *   If forecast is not available, null will be returned.
      */
     calculateHeatingHoursLinear(curve, temperature) {
-	console.log('heating-calculator.js: Calculating number of heating hours with linear curve...');
+  console.log('heating-calculator.js: Calculating number of heating hours with linear curve...');
 
-	// Early exit if no weather forecast is available.
-	if (this.forecast.length < 1) {
-	    console.error("heating-calculator.js: Empty forecast provided as an input!");
-	    return null;
-	}
+  // Early exit if no weather forecast is available.
+  if (this.forecast.length < 1) {
+      console.error("heating-calculator.js: Empty forecast provided as an input!");
+      return null;
+  }
 
-	// Calculate heat curve based on two constant points.
-	// y = kx + b
-	// x = temperature, y = number of needed hours.
+  // Calculate heat curve based on two constant points.
+  // y = kx + b
+  // x = temperature, y = number of needed hours.
 
-	const p1 = {
-	    x : curve[0].temperature,
-	    y : curve[0].hours
-	};
-	const p2 = {
-	    x: curve[1].temperature,
-	    y: curve[1].hours
-	}
+  const p1 = {
+      x : curve[0].temperature,
+      y : curve[0].hours
+  };
+  const p2 = {
+      x: curve[1].temperature,
+      y: curve[1].hours
+  }
 
-	const k = (p1.y-p2.y) / (p1.x-p2.x);
-	const b = p2.y - (k * p2.x);
+  const k = (p1.y-p2.y) / (p1.x-p2.x);
+  const b = p2.y - (k * p2.x);
 
-	console.log('heating-calculator.js: y = ' + k + 'x + ' + b);
-	let raw = k * temperature + b;
+  console.log('heating-calculator.js: y = ' + k + 'x + ' + b);
+  let raw = k * temperature + b;
 
-	// Round to nearest 0.25
-	let y = (Math.round(raw * 4) / 4).toFixed(2);
-	if (temperature < p1.x) {
-	    y = p1.y;
-	}
-	if (temperature > p2.x) {
-	    y = p2.y;
-	}
+  // Round to nearest 0.25
+  let y = (Math.round(raw * 4) / 4).toFixed(2);
+  if (temperature < p1.x) {
+      y = p1.y;
+  }
+  if (temperature > p2.x) {
+      y = p2.y;
+  }
 
-	console.log('heating-calculator.js: Number of needed hours before compensations: ' + y);
-	return y;
+  console.log('heating-calculator.js: Number of needed hours before compensations: ' + y);
+  return y;
     }
 
     /**
@@ -85,23 +85,23 @@ class HeatingCalculator {
      *   If forecast is not available, null will be returned.
      */
     calculateTemperatureDropCompensation() {
-	// Early exit if no weather forecast is available.
-	if (this.forecast.length < 1) {
-	    console.error("heating-calculator.js: Empty forecast provided as an input!");
-	    return null;
-	}
+  // Early exit if no weather forecast is available.
+  if (this.forecast.length < 1) {
+      console.error("heating-calculator.js: Empty forecast provided as an input!");
+      return null;
+  }
 
-	let compensation = 0;
-	let avg1 = this.calculateAverageTemperature('first');
-	let avg2 = this.calculateAverageTemperature('second');
+  let compensation = 0;
+  let avg1 = this.calculateAverageTemperature('first');
+  let avg2 = this.calculateAverageTemperature('second');
 
-	// Check if there is a temperature drop.
-	let diff = avg2 - avg1;
-	if (diff < 0) {
-	    compensation = Math.floor(-1 * diff / 2);
-	}
-	console.log("heating-calculator.js: Temperature drop compensation: " + compensation);
-	return compensation;
+  // Check if there is a temperature drop.
+  let diff = avg2 - avg1;
+  if (diff < 0) {
+      compensation = Math.floor(-1 * diff / 2);
+  }
+  console.log("heating-calculator.js: Temperature drop compensation: " + compensation);
+  return compensation;
     }
 
     /**
@@ -117,40 +117,40 @@ class HeatingCalculator {
      *   If forecast is not available, null will be returned.
      */
     calculateAverageTemperature(mode = 'full') {
-	// Early exit if no weather forecast is available.
-	if (this.forecast.length < 1) {
-	    console.error("heating-calculator.js: Empty forecast provided as an input!");
-	    return null;
-	}
+  // Early exit if no weather forecast is available.
+  if (this.forecast.length < 1) {
+      console.error("heating-calculator.js: Empty forecast provided as an input!");
+      return null;
+  }
 
-	let sum = null;
-	let avg = null;
+  let sum = null;
+  let avg = null;
 
-	let start = 0;
-	let stop = this.forecast.length - 1;
+  let start = 0;
+  let stop = this.forecast.length - 1;
 
-	switch (mode) {
+  switch (mode) {
             case 'first':
-	        start = 0;
+          start = 0;
                 stop = Math.floor(this.forecast.length / 2) - 1;
-	        break;
+          break;
             case 'second':
-	        start = Math.floor(this.forecast.length / 2);
+          start = Math.floor(this.forecast.length / 2);
                 stop = this.forecast.length - 1;
-	        break;
-	}
-	for (let i = start; i <= stop; i++) {
-	    sum += this.forecast[i].value; 
-	}
+          break;
+  }
+  for (let i = start; i <= stop; i++) {
+      sum += this.forecast[i].value; 
+  }
 
-	// Avoid division by zero if forecast is empty.
-	let duration = stop-start+1;
-	if (duration) {
-	    avg = sum / duration;
-	}
+  // Avoid division by zero if forecast is empty.
+  let duration = stop-start+1;
+  if (duration) {
+      avg = sum / duration;
+  }
 
-	console.log('heating-calculator.js: average temperature (' + mode + '): ' + avg);
-	return avg;
+  console.log('heating-calculator.js: average temperature (' + mode + '): ' + avg);
+  return avg;
     }
 }
 
