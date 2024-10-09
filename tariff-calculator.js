@@ -40,7 +40,7 @@ class TariffCalculator {
     }
 
     let current = start;
-    while (current < stop) {
+    while (current.isBefore(stop)) {
       let price = null;
       // Calculate the price using the given distribution product
       if (product == 'night') {
