@@ -9,8 +9,8 @@ class TariffCalculator {
    * @param string resolution
    *   Resolution of the time series to be used.
    */
-  constructor(resolution = 'PT15M') {
-    this.resolution = time.Duration.parse(resolution);
+  constructor() {
+    this.resolution = time.Duration.parse("PT15M");
   }
 
   /**
