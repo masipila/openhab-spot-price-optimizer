@@ -271,7 +271,7 @@ class GenericOptimizer {
     }
 
     // Convert from hours to a Duration, ensure it matches price resolution.
-    let remainingDuration = this.round(time.Duration.ofMinutes(Math.round(60*hours)));
+    let remainingDuration = this.round(this.convertHoursToDuration(hours));
 
     // Set constraints and calculate the duration of the optimization window.
     if (startConstraint == null) {
@@ -365,7 +365,7 @@ class GenericOptimizer {
     console.log(`generic-optimizer.js: ${operation} ${hours.toFixed(2)} hours as a consecutive period...`);
 
     // Convert hours (which can be a float) to a Duration.
-    const duration = this.round(time.Duration.ofMinutes(Math.round(hours*60)));
+    const duration = this.round(this.convertHoursToDuration(hours));
 
     // Set constraints and calculate the duration of the optimization window.
     if (startConstraint == null) {
@@ -693,13 +693,26 @@ class GenericOptimizer {
       return false;
     }
 
-    const requestDuration = time.Duration.ofMinutes(60 * hours);
+    const requestDuration = this.convertHoursToDuration(hours);
     if (requestDuration.compareTo(this.priceWindowDuration) > 0) {
       console.error(`generic-optimizer.js: Aborting optimization, requested duration ${requestDuration} is longer than the price window!`);
       return false;
     }
 
     return true;
+  }
+
+  /**
+   * Converts hours to Duration
+   *
+   * @param float hours
+   *   Requested duration in hours
+   *
+   * @return
+   *   Duration
+   */
+  convertHoursToDuration(hours) {
+    return time.Duration.ofMinutes(Math.round(60 * hours));
   }
 
 }
