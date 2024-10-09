@@ -130,7 +130,7 @@ class Entsoe {
           // Normalize Period to be an array if just one is present.
           let periods = this.normalizeArray(timeSeries[i].Period);
           for (let j = 0; j < periods.length; j++) {
-            prices = prices.concat(this.parseTimeSeries(periods[j], tax));
+            prices = prices.concat(this.parsePeriod(periods[j], tax));
           }
         }
       }
@@ -176,7 +176,7 @@ class Entsoe {
    * @return array
    *   Array of datetime-value pairs representing prices.
    */
-  parseTimeSeries(period, tax) {
+  parsePeriod(period, tax) {
     let prices = [];
     let start = time.toZDT(period.timeInterval.start);
     let resolution = time.Duration.parse(period.resolution);
