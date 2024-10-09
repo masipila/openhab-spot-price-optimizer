@@ -98,7 +98,7 @@ class TariffCalculator {
    * @return float
    *   Tariff c/kWh at the given time.
    */
-  calculatePriceSeasonalDistribution(zdt, price1, price2, tax) {
+  calculatePriceSeasonalDistribution(zdt, priceParams) {
     console.debug("tariff-calculator.js: Calculating fee for hour: " + zdt.toString());
 
     // Summer price
