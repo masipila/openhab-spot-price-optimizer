@@ -73,7 +73,7 @@ class Entsoe {
     console.debug("entsoe.js: URL for the API call: " + url);
 
     const http = Java.type("org.openhab.core.model.script.actions.HTTP");
-    let response = http.sendHttpGetRequest(url, 10000);
+    let response = http.sendHttpGetRequest(url, 45000);
     console.debug("entsoe.js: Response XML from Entso-E API:");
     console.debug(response);
     return response;
@@ -109,7 +109,7 @@ class Entsoe {
     // API returns an Acknowledgement_MarketDocument when prices are not available.
     if ('Acknowledgement_MarketDocument' in json) {
       try {
-        const error_text = json['Acknowledgement_MarketDocument']['Reason']['text'];
+        const error_text = json.Acknowledgement_MarketDocument.Reason.text;
         console.warn('entsoe.js: ' + error_text);
       }
       catch {
@@ -122,18 +122,16 @@ class Entsoe {
     // API returns Publication_MarketDocument when prices are available.
     else if ('Publication_MarketDocument' in json) {
       try {
-        // TimeSeries is either an array (multiple days) or an object (single day).
-        if (Array.isArray(json['Publication_MarketDocument']['TimeSeries'])) {
-          let n = json['Publication_MarketDocument']['TimeSeries'].length;
-          console.log("entsoe.js: Received time series for " + n + " days.");
-          for (let i = 0; i < n; i++) {
-            let timeSeries = json['Publication_MarketDocument']['TimeSeries'][i];
-            prices = prices.concat(this.parseTimeSeries(timeSeries, tax));
+
+        // Normalize TimeSeries to be an array if just one is present.
+        let timeSeries = this.normalizeArray(json.Publication_MarketDocument.TimeSeries);
+        for (let i = 0; i < timeSeries.length; i++) {
+
+          // Normalize Period to be an array if just one is present.
+          let periods = this.normalizeArray(timeSeries[i].Period);
+          for (let j = 0; j < periods.length; j++) {
+            prices = prices.concat(this.parseTimeSeries(periods[j], tax));
           }
-        }
-        else {
-          let timeSeries = json['Publication_MarketDocument']['TimeSeries'];
-          prices = prices.concat(this.parseTimeSeries(timeSeries, tax));
         }
       }
       catch (exception){
@@ -154,22 +152,38 @@ class Entsoe {
   }
 
   /**
-   * Parses one TimeSeries element of the response.
+   * Normalizes a JSON element to be an array
    *
-   * @param object timeSeries
-   *   Json object representing the time series of one day.
+   * @param element
+   *   JSON element which is either an Object or an array.
+   * @return array
+   *   If the input was an array, return it as such.
+   *   If it was an Object, wrap it to an array.
+   */
+  normalizeArray(element) {
+    if (!Array.isArray(element)) {
+      element = [element];
+    }
+    return element;
+  }
+
+  /**
+   * Parses one TimeSeries.Period element of the response.
+   *
+   * @param object period
+   *   Json object representing the period of one day.
    *
    * @return array
    *   Array of datetime-value pairs representing prices.
    */
-  parseTimeSeries(timeSeries, tax) {
+  parseTimeSeries(period, tax) {
     let prices = [];
-    let start = time.toZDT(timeSeries['Period']['timeInterval']['start']);
-    let resolution = time.Duration.parse(timeSeries['Period']['resolution']);
-    console.log("entsoe.js: Time series start: " + start + ", resolution: " + resolution);
+    let start = time.toZDT(period.timeInterval.start);
+    let resolution = time.Duration.parse(period.resolution);
+    console.log("entsoe.js: Period start: " + start + ", resolution: " + resolution);
 
     // Loop through spot prices. Convert EUR / MWh to c / kWh and add tax.
-    let points = timeSeries['Period']['Point'];
+    let points = period.Point;
     for (let i = 0; i < points.length; i++) {
       let current = start.plus(resolution.multipliedBy(i));
       let datetime = current.format(time.DateTimeFormatter.ISO_INSTANT);
@@ -184,7 +198,7 @@ class Entsoe {
 
       // If Entso provided data with 60 minute resolution, generate the
       // entries for every 15 minutes.
-      if (timeSeries['Period']['resolution'] == 'PT60M') {
+      if (period.resolution == 'PT60M') {
         for (let j = 1; j < 4; j++) {
           current = current.plus(time.Duration.parse('PT15M'));
           datetime = current.format(time.DateTimeFormatter.ISO_INSTANT);
