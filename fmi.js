@@ -22,7 +22,7 @@ class FMI {
     const http = Java.type("org.openhab.core.model.script.actions.HTTP");
     console.log('fmi.js: Making an API call to FMI API...');
     const url = 'http://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::forecast::edited::weather::scandinavia::point::simple&place=' + place + '&parameters=Temperature,PrecipitationAmount,WindSpeedMS,TotalCloudCover';
-      const xml = http.sendHttpGetRequest(url, 10000);
+    const xml = http.sendHttpGetRequest(url, 10000);
     console.debug('fmi.js: Response from FMI API');
     console.debug(xml);
     return xml;
@@ -46,8 +46,8 @@ class FMI {
 
     // Early exit in case XML is null.
     if (xml == null) {
-      console.error('fmi.js: XML empty, parsing aborted.')
-        return points;
+      console.error('fmi.js: XML empty, parsing aborted.');
+      return points;
     }
     try {
       const jsObject = JSON.parse(transformation.transform('XSLT', 'xml2json.xsl', xml));
@@ -102,7 +102,7 @@ class FMI {
       let point = {
         datetime: datetime,
         value: windchill
-      }
+      };
       points.push(point);
     }
 
