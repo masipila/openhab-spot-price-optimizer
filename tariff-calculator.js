@@ -53,8 +53,8 @@ class TariffCalculator {
       let point = {
         datetime: current.format(time.DateTimeFormatter.ISO_INSTANT),
         value: price
-      }
-        points.push(point);
+      };
+      points.push(point);
       current = current.plus(this.resolution);
     }
 
@@ -152,8 +152,8 @@ class TariffCalculator {
         let point = {
           datetime: datetime,
           value: parseFloat(spotPrice) + parseFloat(distributionPrice)
-        }
-          points.push(point);
+        };
+        points.push(point);
       }
     }
     console.debug(JSON.stringify(points));
