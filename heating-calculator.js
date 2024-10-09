@@ -7,6 +7,7 @@ class HeatingCalculator {
    * Constructor.
    */
   constructor() {
+    this.error = false;
   }
 
   /**
@@ -16,7 +17,19 @@ class HeatingCalculator {
    *   Array of datetime-value pairs.
    */
   setForecast(forecast) {
+    // Validate forecast
+    if (!forecast || forecast.length < 2) {
+      console.error("heating-calculator.js: Invalid forecast data provided.");
+      console.error(JSON.stringify(forecast));
+      this.error = true;
+      return null;
+    }
+
     this.forecast = forecast;
+    this.forecastStart = time.toZDT(this.forecast[0].datetime);
+    this.resolution = time.Duration.between(this.forecastStart, time.toZDT(this.forecast[1].datetime));
+    this.forecastEnd = time.toZDT(this.forecast[this.forecast.length - 1].datetime).plus(this.resolution);
+    this.forecastDuration = time.Duration.between(this.forecastStart, this.forecastEnd);
     console.debug(JSON.stringify(this.forecast));
   }
 
@@ -33,13 +46,21 @@ class HeatingCalculator {
    *   If forecast is not available, null will be returned.
    */
   calculateHeatingHoursLinear(curve, temperature) {
-    console.log('heating-calculator.js: Calculating number of heating hours with linear curve...');
-
-    // Early exit if no weather forecast is available.
-    if (this.forecast.length < 1) {
-      console.error("heating-calculator.js: Empty forecast provided as an input!");
+    // Validate heat curve.
+    if (!this.validateHeatCurve(curve)) {
+      console.error("heating-calculator.js: Invalid heat curve provided.");
+      console.error(JSON.stringify(curve));
+      this.error = true;
       return null;
     }
+
+    // Early exit if there were previous errors.
+    if (this.error) {
+      console.error("heating-calculator.js: Aborting calculations, see previous errors!");
+      return null;
+    }
+
+    console.debug('heating-calculator.js: Calculating number of heating hours with linear curve...');
 
     // Calculate heat curve based on two constant points.
     // y = kx + b
@@ -56,32 +77,39 @@ class HeatingCalculator {
 
     const k = (p1.y-p2.y) / (p1.x-p2.x);
     const b = p2.y - (k * p2.x);
+    console.debug('heating-calculator.js: hours = ' + k + 'x + ' + b);
 
-    console.log('heating-calculator.js: y = ' + k + 'x + ' + b);
-    let raw = k * temperature + b;
+    let hours = (k * temperature) + b;
 
-    // Round to nearest 0.25
-    let y = (Math.round(raw * 4) / 4).toFixed(2);
+    // Use max / min of the curve it the given value is out of range
     if (temperature < p1.x) {
-      y = p1.y;
+      hours = p1.y;
     }
-    if (temperature > p2.x) {
-      y = p2.y;
+    else if (temperature > p2.x) {
+      hours = p2.y;
     }
 
-    console.log('heating-calculator.js: Number of needed hours before compensations: ' + y);
-    return y;
+    // If forecast duration is not 24H, scale the heating need.
+    const multiplier = this.forecastDuration.seconds() / time.Duration.parse('PT24H').seconds();
+    hours = (multiplier * hours);
+
+    console.debug('heating-calculator.js: ' + this.forecastStart + ' - ' + this.forecastEnd + ': ' + temperature + ', ' + hours);
+
+    return hours;
   }
 
   /**
    * Calculates a compensation for significant temperature drops.
    *
    * Average temperatures between the first and second half of the forecast
-   * period are compared. If there is a temperature drop of N degres, N/2 heating
-   * hours will be returned as a compensation, rounded up.
+   * period are compared. If there is a temperature drop of N degres, N/2
+   * heating hours will be returned as a compensation, rounded up.
+   *
+   * DEPRECATED: not used with heating-period-optimizer. This method is kept for
+   * backwards compatibility with peak-period-optimizer.
    *
    * @return int
-   *   Number of heating hours to add as a compensation for the temperature drop.
+   *   Number of heating hours to add to compensate the temperature drop.
    *   If forecast is not available, null will be returned.
    */
   calculateTemperatureDropCompensation() {
@@ -117,9 +145,9 @@ class HeatingCalculator {
    *   If forecast is not available, null will be returned.
    */
   calculateAverageTemperature(mode = 'full') {
-    // Early exit if no weather forecast is available.
-    if (this.forecast.length < 1) {
-      console.error("heating-calculator.js: Empty forecast provided as an input!");
+    // Early exit if there were previous errors.
+    if (this.error) {
+      console.error("heating-calculator.js: Aborting calculations, see previous errors!");
       return null;
     }
 
@@ -148,9 +176,33 @@ class HeatingCalculator {
     if (duration) {
       avg = sum / duration;
     }
-
-    console.log('heating-calculator.js: average temperature (' + mode + '): ' + avg);
+    console.debug('heating-calculator.js: average temperature (' + mode + '): ' + avg);
     return avg;
+  }
+
+  /**
+   * Validates the heat curve.
+   *
+   * @param array curve
+   *   Array of temperature-hours pairs
+   * @return bool
+   */
+  validateHeatCurve(curve) {
+    if (!curve) {
+      return false;
+    }
+    if (curve.length < 2) {
+      return false;
+    }
+    for (let i = 0; i < curve.length; i++) {
+      if (!curve[i].hasOwnProperty('temperature')) {
+        return false;
+      }
+      if (!curve[i].hasOwnProperty('hours')) {
+        return false;
+      }
+    }
+    return true;
   }
 }
 
