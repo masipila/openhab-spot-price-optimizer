@@ -182,18 +182,20 @@ class Entsoe {
     let resolution = time.Duration.parse(period.resolution);
     console.log("entsoe.js: Period start: " + start + ", resolution: " + resolution);
 
+    // Normalize A03 curve document.
+    let normalizedPoints = this.normalizeA03Curve(period);
+
     // Loop through spot prices. Convert EUR / MWh to c / kWh and add tax.
-    let points = period.Point;
-    for (let i = 0; i < points.length; i++) {
+    for (let i = 0; i < normalizedPoints.length; i++) {
       let current = start.plus(resolution.multipliedBy(i));
       let datetime = current.format(time.DateTimeFormatter.ISO_INSTANT);
-      let price = points[i]['price.amount'] * tax / 10;
+      let price = normalizedPoints[i]['price.amount'] * tax / 10;
       price = price.toFixed(4);
-      let point = {
+      let resultPoint = {
         datetime: datetime,
         value: price
       };
-      prices.push(point);
+      prices.push(resultPoint);
       console.debug('entsoe.js: ' + datetime + ' ' + price + ' c/kWh');
 
       // If Entso provided data with 60 minute resolution, generate the
@@ -202,17 +204,64 @@ class Entsoe {
         for (let j = 1; j < 4; j++) {
           current = current.plus(time.Duration.parse('PT15M'));
           datetime = current.format(time.DateTimeFormatter.ISO_INSTANT);
-          point = {
+          resultPoint = {
             datetime: datetime,
             value: price
           };
-          prices.push(point);
+          prices.push(resultPoint);
           console.debug('entsoe.js: ' + datetime + ' ' + price + ' c/kWh');
         }
       }
     }
     return prices;
   }
+
+  /**
+   * Normalizes EntsoeE A03 curve type to an array without gaps.
+   *
+   * EntsoE A03 curve type contains a Point only if it differs from the
+   * previous value. This method prepares a normalized array where a new
+   * element is added even if the value has not changed.
+   *
+   * @see https://eepublicdownloads.entsoe.eu/clean-documents/EDI/Library/cim_based/Introduction_of_different_Timeseries_possibilities__curvetypes__with_ENTSO-E_electronic_document_v1.4.pdf
+   *
+   * @param object period
+   *   JSON object
+   *
+   * @return array
+   */
+  normalizeA03Curve(period) {
+    let normalized = [];
+
+    // Normalize points to an array just in case prices would be same for the entire day.
+    let points = this.normalizeArray(period.Point);
+    let currentPosition = 0;
+
+    for (let i = 0; i < points.length; i++) {
+      let position = points[i].position;
+      let delta = position - currentPosition;
+
+      // If position increased by 1, add the element normally.
+      if (delta == 1) {
+        normalized.push(points[i]);
+        currentPosition++;
+      }
+
+      // Position increased by more than 1
+      else {
+        // Repeat the previous element.
+        for (let j = 1; j < delta; j++) {
+          normalized.push(points[i-1]);
+          currentPosition++;
+        }
+        // And then add the new element.
+        normalized.push(points[i]);
+        currentPosition++;
+      }
+    }
+    return normalized;
+  }
+
 }
 
 /**
