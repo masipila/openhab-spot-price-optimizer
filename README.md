@@ -23,5 +23,5 @@ In addition to being home automation enthusiast, I'm also semi-professional athl
 * Kisakallio Curling Club ry (VAT ID FI30644384)
 * IBAN: FI94 5280 0020 0319 02
 * BIC: OKOYFIHH
-* Message: openhab optimizer
-
+* Reference number: 20006
+* Message (if you can't use the reference number): openhab optimizer
