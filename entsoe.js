@@ -232,6 +232,7 @@ class Entsoe {
    */
   normalizeA03Curve(period) {
     let normalized = [];
+    let resolution = time.Duration.parse(period.resolution);
 
     // Normalize points to an array just in case prices would be same for the entire day.
     let points = this.normalizeArray(period.Point);
@@ -259,6 +260,24 @@ class Entsoe {
         currentPosition++;
       }
     }
+
+    // A03 curve can end "unexpectedly" if the the day ends with same prices.
+
+    // Calculate expected number of position nodes.
+    let start = time.toZDT(period.timeInterval.start);
+    let end = time.toZDT(period.timeInterval.end);
+    let duration = time.Duration.between(start, end);
+    let durationSeconds = duration.get(time.ChronoUnit.SECONDS);
+    let resolutionSeconds = resolution.get(time.ChronoUnit.SECONDS);
+    let expected = durationSeconds/resolutionSeconds;
+
+    // Check if there are "missing" points at the end.
+    let missingPoints = expected - normalized.length;
+    let lastPoint = points[points.length -1];
+    for (let k = 0; k < missingPoints; k++) {
+      normalized.push(points[points.length - 1]);
+    }
+
     return normalized;
   }
 
