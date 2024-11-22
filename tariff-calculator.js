@@ -1,5 +1,8 @@
 /**
  * Class for calculating distribution prices with Caruna pricing logic.
+ *
+ * If your grid operator has other pricing logic than this, feel free
+ * to post a feature request on openHAB community forum.
  */
 class TariffCalculator {
 
@@ -7,66 +10,60 @@ class TariffCalculator {
    * Constructor.
    *
    * @param string resolution
-   *   Resolution of the time series to be used.
+   *   Use the same resolution that you have for spot prices, e.g. 'PT60M' or 'PT15M'.
    */
-  constructor() {
-    this.resolution = time.Duration.parse("PT15M");
+  constructor(resolution) {
+    this.resolution = time.Duration.parse(resolution);
   }
 
   /**
-   * Returns prices for hours between 'start' and 'stop'.
+   * Returns distribution prices between 'start' and 'end'.
    *
    * @param ZonedDateTime start
-   *   Start time (ensure full hour).
-   * @param ZonedDateTime stop
-   *   Stop time (ensure full hour).
+   *   Start time
+   * @param ZonedDateTime end
+   *   End time.
    * @param string product
    *   Distribution product to use: 'night' or 'seasonal'
    * @param object priceParams
-   *   Price parameters for given distribution product
+   *   Price parameters for given distribution product.
    *
-   * @return list
-   *   List of datetime-value pairs.
+   * @return TimeSeries
+   *   TimeSeries of distribution prices.
    */
-  getPrices(start, stop, product, priceParams) {
+  getPrices(start, end, product, priceParams) {
     console.log("tariff-calculator.js: Calculating distribution prices...");
-    let points = [];
+    const ts = new items.TimeSeries('REPLACE');
 
     // Early exit for invalid product argument
     const whitelist = ['night', 'seasonal'];
     if (!whitelist.includes(product)) {
       console.error("tariff-calculator.js: Invalid distribution product " + product);
-      return points;
+      return ts;
     }
 
     let current = start;
-    while (current.isBefore(stop)) {
-      let price = null;
-      // Calculate the price using the given distribution product
+    while (current.isBefore(end)) {
+      let price;
       if (product == 'night') {
         price = this.calculatePriceNightDistribution(current, priceParams);
       }
       else {
         price = this.calculatePriceSeasonalDistribution(current, priceParams);
       }
-
-      let point = {
-        datetime: current.format(time.DateTimeFormatter.ISO_INSTANT),
-        value: price
-      };
-      points.push(point);
+      ts.add(current, price.toFixed(2));
       current = current.plus(this.resolution);
     }
 
-    console.debug(JSON.stringify(points));
-    return points;
+    console.debug(ts);
+    return ts;
   }
 
   /**
-   * Returns price for given hour using Night Distribution.
+   * Returns price for given datetime using Night Distribution.
    *
    * @param ZonedDateTime zdt
-   *   Hour to calculate the tariff for (ensure input is a full hour).
+   *   Datetime to calculate the tariff for.
    * @param object priceParams
    *   Object with the following keys: price1, price2, tax
    *
@@ -79,19 +76,19 @@ class TariffCalculator {
     // Day
     if (zdt.isBetweenTimes('06:59', '22:00')) {
       console.debug("tariff-calculator.js: Day");
-      return (priceParams.price1+priceParams.tax).toFixed(2);
+      return (priceParams.price1+priceParams.tax);
     }
 
     // If we're still here it's night
     console.debug("tariff-calculator.js: Night");
-    return (priceParams.price2+priceParams.tax).toFixed(2);
+    return (priceParams.price2+priceParams.tax);
   }
 
   /**
-   * Returns price for given hour using Seasonal Distribution.
+   * Returns price for given datetime using Seasonal Distribution.
    *
    * @param ZonedDateTime zdt
-   *   Hour to calculate the tariff for (ensure input is a full hour).
+   *   Datetime to calculate the tariff for.
    * @param object priceParams
    *   Object with the following keys: price1, price2, tax
    *
@@ -104,60 +101,61 @@ class TariffCalculator {
     // Summer price
     if (zdt.monthValue() >= 4 && zdt.monthValue() <= 10) {
       console.debug("tariff-calculator.js: Summer");
-      return (priceParams.price2+priceParams.tax).toFixed(2);
+      return (priceParams.price2+priceParams.tax);
     }
 
     // Winter Sundays
     if (zdt.dayOfWeek() == time.DayOfWeek.SUNDAY) {
       console.debug("tariff-calculator.js: Sunday");
-      return (priceParams.price2+priceParams.tax).toFixed(2);
+      return (priceParams.price2+priceParams.tax);
     }
 
-    // Winter daytime (except Sundays)
+    // Winter daytime (except Sundays which has been covered already).
     if (zdt.isBetweenTimes('06:59', '22:00')) {
       console.debug("tariff-calculator.js: Winter day");
-      return (priceParams.price1+priceParams.tax).toFixed(2);
+      return (priceParams.price1+priceParams.tax);
     }
 
     // If we're still here it's winter night time
     console.debug("tariff-calculator.js: Winter night");
-    return (priceParams.price2+priceParams.tax).toFixed(2);
+    return (priceParams.price2+priceParams.tax);
   }
 
   /**
    * Returns total elecricity prices by summing spot prices and distribution prices.
    *
-   * @param list spotPrices
-   *   List of datetime-value pairs
-   * @param list distributionPrices
-   *   List of datetime-value pairs
+   * @param ZonedDateTime start
+   * @param ZonedDateTime end
+   * @param Item spotItem
+   * @param Item distributionItem
    *
-   * @return list
-   *   List of datetime-value pairs representing total electricity prices.
+   * @return TimeSeries
+   *   TimeSeries for total electricity prices.
    */
-  getTotalPrices(spotPrices, distributionPrices) {
-    console.debug("tariff-calculator.js: Calculating total price...");
-    // Early exit if prices are not available.
-    if (!spotPrices || !distributionPrices || spotPrices.length < 1 || distributionPrices.length < 1) {
-      console.error("tariff-calculator.js: No spot / distribution prices available, aborting total price calculation!");
-      return null;
+  getTotalPrices(start, end, spotItem, distributionItem) {
+    console.log("tariff-calculator.js: Calculating total price...");
+    const ts = new items.TimeSeries('REPLACE');
+
+    // Read spot and distribution prices from persistence service.
+    const spotPrices = spotItem.persistence.getAllStatesBetween(start, end);
+    const distributionPrices = distributionItem.persistence.getAllStatesBetween(start, end);
+
+    // Early exit if the are mismatch between the spot and distribution prices.
+    if (spotPrices.length != distributionPrices.length) {
+      console.error(`tariff-calculator.js: Aborting total price calculation! Different number of spot prices (${spotPrices.length}) and distribution prices (${distributionPrices.length})!`);
+      return ts;
     }
 
-    let points = [];
+    // Calculate the total prices.
     for (let i = 0; i < spotPrices.length; i++) {
-      let datetime = spotPrices[i].datetime;
-      let spotPrice = spotPrices[i].value;
-      let distributionPrice = distributionPrices.find(x => x.datetime === datetime).value;
-      if (distributionPrice) {
-        let point = {
-          datetime: datetime,
-          value: parseFloat(spotPrice) + parseFloat(distributionPrice)
-        };
-        points.push(point);
-      }
+      let datetime = spotPrices[i].timestamp;
+      let spotPrice = spotPrices[i].numericState;
+      let distributionPrice = distributionPrices[i].numericState;
+      let totalPrice = spotPrice + distributionPrice;
+      ts.add(datetime, totalPrice.toFixed(2));
     }
-    console.debug(JSON.stringify(points));
-    return points;
+    console.debug(ts);
+    return ts;
   }
 }
 
