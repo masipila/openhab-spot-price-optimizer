@@ -6,7 +6,8 @@ class GenericOptimizer {
   /**
    * Constructor.
    *
-   * The resolution of the price time series is defaulted to PT15M.
+   * Resolution of the control points will always be 15 minutes regardless of
+   * the resolution of the prices.
    */
   constructor() {
     this.prices = [];
@@ -17,31 +18,82 @@ class GenericOptimizer {
   /**
    * Sets the prices array.
    *
-   * @param array prices
-   *   Array of spot prices as datetime-value pairs.
+   * @param timeseries prices
+   *   Array of PersistedItem objects.
    */
   setPrices(prices) {
-    // Countries East from CET will have some hours fetched the day before.
-    // Calculate the offset between local time zone and CET/CEST.
-    const local = time.toZDT();
-    const cet = local.withZoneSameLocal(time.ZoneId.of("Europe/Berlin"));
-    const offset = time.ChronoUnit.HOURS.between(local, cet);
+    console.debug("generic-optimizer.js: price data read from persistence:");
+    console.debug(prices);
 
-    // Check that there is enough prices.
-    const duration = this.resolution.multipliedBy(prices.length);
-    if (duration.compareTo(time.Duration.ofHours(offset + 1)) < 0) {
+    // Early exit if no prices are available.
+    if (prices.length < 1) {
       this.error = true;
       console.error("generic-optimizer.js: Not enough prices for optimizations!");
       return null;
     }
 
-    this.prices = prices;
+    // Normalize prices to PT15M resolution and to the expected structure.
+    this.prices = this.normalizePrices(prices);
     this.priceStart = time.toZDT(this.prices[0].datetime);
     this.priceEnd = time.toZDT(this.prices[this.prices.length - 1].datetime).plus(this.resolution);
     this.priceWindowDuration = time.Duration.between(this.priceStart, this.priceEnd);
 
     console.log(`generic-optimizer.js: price window ${this.priceStart} - ${this.priceEnd} (${this.priceWindowDuration})`);
     console.debug(JSON.stringify(this.prices));
+  }
+
+  /**
+   * Normalizes prices to PT15M resolution and to the expected structure.
+   *
+   * @param array prices
+   *   Array of PersistedItem objects.
+   *
+   * @return array
+   *   Array of datetime-value objects.
+   */
+  normalizePrices(prices) {
+    let points = [];
+
+    // Check price resolution from the last two points.
+    const a = time.toZDT(prices[prices.length - 2].timestamp);
+    const b = time.toZDT(prices[prices.length - 1].timestamp);
+    const priceResolution = time.Duration.between(a, b);
+
+    // Check how many PT15M slots need to be added to normalize.
+    let n;
+    switch (priceResolution.toMinutes()) {
+      case 15:
+        n = 1;
+        break;
+      case 30:
+        n = 2;
+        break;
+      case 60:
+        n = 4;
+        break;
+      default:
+        console.error(`generic-optimizer.js: Unexpected price resolution ${priceResolution}, aborting!`);
+        this.error = true;
+    }
+
+    // Normalize to PT15M resolution.
+    for (let i = 0; i < prices.length; i++) {
+      let zdt = time.toZDT(prices[i].timestamp);
+      let price = prices[i].numericState;
+
+      for (let j = 0; j < n; j++) {
+        let point = {
+          datetime: zdt.format(time.DateTimeFormatter.ISO_INSTANT),
+          value: price
+        };
+        points.push(point);
+        zdt = zdt.plus(this.resolution);
+      }
+    }
+
+    console.debug("generic-optimizer.js: normalized price data:");
+    console.debug(JSON.stringify(points));
+    return points;
   }
 
   /**
@@ -649,14 +701,17 @@ class GenericOptimizer {
   }
 
   /**
-   * Returns the control points prepared by the other methods.
+   * Returns a timeseries of control points prepared by the other methods.
    *
-   * The final control points must be an array of datetime-value pairs where value is either 1 or 0.
-   * Our prices are currently an array of datetime-value-control points. Transform this array
-   * so that we remove the current values (spot prices) and renames the 'control' elements as 'values'.
+   * The final control points must be a timeseries where the state is either 1
+   * or 0. Our variable this.prices is an array of datetime-value-control.
+   * Prepare the timeseries from datetime and control attributes.
+   *
+   * @return timeseries
+   *   Timeseries of control points.
    */
   getControlPoints() {
-    let points = [];
+    const ts = new items.TimeSeries('REPLACE');
 
     // Early exit if there have been errors.
     if (this.error) {
@@ -665,13 +720,12 @@ class GenericOptimizer {
     }
 
     for (let i = 0; i < this.prices.length; i++) {
-      points[i] = {
-        datetime: this.prices[i]['datetime'],
-        value: this.prices[i]['control']
-      }
+      let zdt = time.toZDT(this.prices[i].datetime);
+      let value = String(this.prices[i].control);
+      ts.add(zdt, value);
     }
-
-    return points;
+    console.debug(ts);
+    return ts;
   }
 
   /**
