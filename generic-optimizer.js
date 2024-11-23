@@ -18,7 +18,7 @@ class GenericOptimizer {
   /**
    * Sets the prices array.
    *
-   * @param timeseries prices
+   * @param array prices
    *   Array of PersistedItem objects.
    */
   setPrices(prices) {
