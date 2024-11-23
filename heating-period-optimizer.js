@@ -567,9 +567,11 @@ class HeatingPeriodOptimizer {
       // All heatCurve must have temperature and hour attributes.
       for (let i = 0; i < parameters.heatCurve.length; i++) {
         if (!parameters.heatCurve[i].hasOwnProperty('temperature')) {
+          console.error("heating-period-optimizer.js: Validation failed: heatCurve points must have temperature!");
           isValid = false;
         }
         if (!parameters.heatCurve[i].hasOwnProperty('hours')) {
+          console.error("heating-period-optimizer.js: Validation failed: heatCurve points must have number of hours!");
           isValid = false;
         }
       }
