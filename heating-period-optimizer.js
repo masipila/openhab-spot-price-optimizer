@@ -12,8 +12,6 @@ class HeatingPeriodOptimizer {
   /**
    * Constructor.
    *
-   * @param Influx influx
-   *   Influx service.
    * @param GenericOptimizer genericOptimzer
    *   GenericOptimizer service.
    * @param HeatingCalculator heatingCalculator
@@ -25,10 +23,9 @@ class HeatingPeriodOptimizer {
    * @param object parameters
    *   Parameters object.
    */
-  constructor(influx, genericOptimizer, heatingCalculator, start, end, parameters) {
+  constructor(genericOptimizer, heatingCalculator, start, end, parameters) {
     console.log('heating-period-optimizer.js: Starting heating period optimizer...');
     console.log('-----------------------------------------------------------------');
-    this.influx            = influx;
     this.genericOptimizer  = genericOptimizer;
     this.heatingCalculator = heatingCalculator;
 
@@ -48,8 +45,8 @@ class HeatingPeriodOptimizer {
     // Required parameters.
     this.start             = start;
     this.end               = end;
-    this.priceItem         = parameters.priceItem;
-    this.forecastItem      = parameters.forecastItem;
+    this.priceItem         = items.getItem(parameters.priceItem);
+    this.forecastItem      = items.getItem(parameters.forecastItem);
     this.numberOfPeriods   = parameters.numberOfPeriods;
     this.heatCurve         = parameters.heatCurve;
 
@@ -59,9 +56,20 @@ class HeatingPeriodOptimizer {
     this.flexDefault       = (parameters.flexDefault == undefined)   ? 0 : parameters.flexDefault;
     this.flexThreshold     = (parameters.flexThreshold == undefined) ? 0 : parameters.flexThreshold;
     this.gapThreshold      = (parameters.gapThreshold == undefined)  ? 0 : parameters.gapThreshold;
-    this.shiftPriceLimit     = (parameters.shiftPriceLimit == undefined) ? 0 : parameters.shiftPriceLimit;
+    this.shiftPriceLimit   = (parameters.shiftPriceLimit == undefined) ? 0 : parameters.shiftPriceLimit;
 
-    this.genericOptimizer.setPrices(this.influx.getPoints(this.priceItem, this.start, this.end));
+    // Read prices, validate them and pass them to GenericOptimizer.
+    const pricePoints = this.priceItem.persistence.countBetween(this.start, this.end);
+    const duration = time.Duration.between(this.start, this.end).toHours();
+
+    if (pricePoints < duration) {
+      console.error('heating-period-optimizer.js: Prices not available, aborting optimization!');
+      this.error = true;
+      return null;
+    }
+
+    let prices = this.priceItem.persistence.getAllStatesBetween(this.start, this.end);
+    this.genericOptimizer.setPrices(prices);
     this.periods = [];
   }
 
@@ -95,8 +103,7 @@ class HeatingPeriodOptimizer {
     for (let i=-1; i < (this.numberOfPeriods + 2); i++) {
       let periodStart = this.start.plus(duration.multipliedBy(i));
       let periodEnd = periodStart.plus(duration);
-      let forecast = this.influx.getPoints(this.forecastItem, periodStart, periodEnd);
-      let period = new HeatingPeriod.HeatingPeriod(this.heatingCalculator, periodStart, periodEnd, forecast, this.heatCurve, this.flexDefault, this.flexThreshold);
+      let period = new HeatingPeriod.HeatingPeriod(this.heatingCalculator, periodStart, periodEnd, this.forecastItem, this.heatCurve, this.flexDefault, this.flexThreshold);
       this.periods.push(period);
       console.log(period);
     }
@@ -556,7 +563,17 @@ class HeatingPeriodOptimizer {
       console.error("heating-period-optimizer.js: Validation failed: heatCurve must be an array with 2 points.");
       isValid = false;
     }
-
+    else {
+      // All heatCurve must have temperature and hour attributes.
+      for (let i = 0; i < parameters.heatCurve.length; i++) {
+        if (!parameters.heatCurve[i].hasOwnProperty('temperature')) {
+          isValid = false;
+        }
+        if (!parameters.heatCurve[i].hasOwnProperty('hours')) {
+          isValid = false;
+        }
+      }
+    }
     return isValid;
   }
 }

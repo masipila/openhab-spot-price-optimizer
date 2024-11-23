@@ -1,5 +1,7 @@
 /**
  * Spot price optimizer, HeatingPeriod class.
+ *
+ * Copyright Markus Sipilä 2024. Published under Eclipse Public Licence v 2.0.
  */
 
 class HeatingPeriod {
@@ -13,8 +15,8 @@ class HeatingPeriod {
    *   Start of the heating period.
    * @param ZonedDateTime end
    *   End of the heating period.
-   * @param array forecast
-   *   Array of datetime-value pairs, representing weather forecast.
+   * @param Item forecastItem
+   *   Foreacast Item
    * @param array heatCurve
    *   Array of temperature-hours pairs, representing the heat curve.
    * @param float flexDefault
@@ -22,22 +24,27 @@ class HeatingPeriod {
    * @param float flexThreshold
    *   Flexibility will be set to 100% when the heating need is below this threshold.
    */
-  constructor(heatingCalculator, start, end, forecast, heatCurve, flexDefault, flexThreshold) {
-    if (flexDefault < 0 || flexDefault > 1) {
-      console.error("heating-period.js: flexDefault must be 0-1!");
+  constructor(heatingCalculator, start, end, forecastItem, heatCurve, flexDefault, flexThreshold) {
+    this.heatingCalculator = heatingCalculator;
+    this.start             = start;
+    this.end               = end;
+    this.duration          = time.Duration.between(start, end);
+    this.forecastItem      = forecastItem;
+    this.heatCurve         = heatCurve;
+    this.flexDefault       = flexDefault;
+    this.flexThreshold     = flexThreshold;
+
+    // Check that weather forecast is available.
+    if (!this.validateForecast()) {
+      return null;
     }
 
-    this.heatingCalculator = heatingCalculator;
-    this.heatingCalculator.setForecast(forecast);
+    // If forecast duration is not 24H, scale the heating need.
+    const multiplier = this.duration.seconds() / time.Duration.parse('PT24H').seconds();
+    this.avgTemp = this.forecastItem.persistence.averageBetween(this.start, this.end).numericState;
+    this.heatingNeed = this.heatingCalculator.calculateHeatingHoursLinear(this.heatCurve, this.avgTemp, multiplier);
 
-    this.start         = start;
-    this.end           = end;
-    this.duration      = time.Duration.between(start, end);
-    this.heatCurve     = heatCurve;
-    this.avgTemp       = this.heatingCalculator.calculateAverageTemperature();
-    this.heatingNeed   = this.heatingCalculator.calculateHeatingHoursLinear(this.heatCurve, this.avgTemp);
-    this.flexDefault   = flexDefault;
-    this.flexThreshold = flexThreshold;
+    // Set default flexibility for this period.
     this.flexibility   = (this.heatingNeed < this.flexThreshold) ? 1.0 : this.flexDefault;
   }
 
@@ -59,7 +66,6 @@ class HeatingPeriod {
   setFlexibility(flexibility) {
     this.flexibility = flexibility;
   }
-
 
   /**
    * Returns heating period start.
@@ -124,6 +130,18 @@ class HeatingPeriod {
   getFlexNeed() {
     let need = this.flexibility * this.heatingNeed;
     return parseFloat(need);
+  }
+
+  /**
+   * Validates that forecast data exists for this period.
+   */
+  validateForecast() {
+    const points = this.forecastItem.persistence.countBetween(this.start, this.end);
+    if (points < this.duration.toHours()) {
+      console.error('heating-calculator.js: Not enough forecast data available!');
+      return false;
+    }
+    return true;
   }
 
   /**
