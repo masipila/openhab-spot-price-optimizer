@@ -20,7 +20,7 @@ class ControlPointCloner {
     const expected = time.Duration.between(tomorrowStart, tomorrowEnd).toHours()*4;
     const actual = controlItem.persistence.countBetween(tomorrowStart, tomorrowEnd);
     if (actual < expected) {
-      console.log(`control-point-cloner.js: Tomorrow's control points missing for ${controlItem.name}!`);
+      console.warn(`control-point-cloner.js: Tomorrow's control points missing for ${controlItem.name}!`);
       return true;
     }
     return false;
@@ -35,20 +35,28 @@ class ControlPointCloner {
    * @return TimeSeries
    */
   getClonedControlPoints(controlItem, todayStart) {
-    const tomorrowStart = todayStart.plusDays(1);
-
     console.log('control-point-cloner.js: Cloning control points for one day onwards.');
-    console.log('control-point-cloner.js: Source control points:');
+
+    const ts = new items.TimeSeries('REPLACE');
+    const tomorrowStart = todayStart.plusDays(1);
     const source = controlItem.persistence.getAllStatesBetween(todayStart, tomorrowStart);
-    console.log(source);
+
+    // Early exit if source controls are missing.
+    if (source.length < 1) {
+      console.warn('control-point-cloner.js: Source controls are missing as well, nothing to clone!');
+      return ts;
+    }
 
     // Clone the control points.
-    const ts = new items.TimeSeries('REPLACE');
+    console.log('control-point-cloner.js: Source control points:');
+    console.log(source);
+
     for (let i = 0; i < source.length; i++) {
       let zdt = source[i].timestamp.plusDays(1);
       let value = String(source[i].numericState);
       ts.add(zdt, value);
     }
+
     console.log('control-point-cloner.js: Cloned control points:');
     console.log(ts);
     return ts;
