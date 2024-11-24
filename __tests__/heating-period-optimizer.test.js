@@ -1,13 +1,57 @@
 const { assertBoolean, assertEqual, assertEqualTime } = require('./test-utils');
 const { HeatingPeriodOptimizer } = require('openhab-spot-price-optimizer/heating-period-optimizer');
 
-// Mock Influx service and the test data for it
-const mockPriceData = require('./test-data/prices-2023-11-08.json');
-const mockInflux = {
-  getPoints: function(item, start, end) {
-    return mockPriceData;
+// Create a mock priceItem
+const mockPriceData = require('./test-data/prices-2023-11-08-pt60m.json');
+const priceItem = {
+  name: 'mockPriceItem',
+  persistence: {
+    countBetween: function(start, end) {
+      return {
+        toHours: function() {
+          return 24;
+        }
+      };
+    },
+    getAllStatesBetween: function(start, end) {
+      return mockPriceData;
+    },
   }
 };
+
+// Mock forecastItem with required methods
+const forecastItem = {
+  name: 'mockForecastItem',
+  persistence: {
+    averageBetween: function(start, end) {
+      return {
+        numericState: 10
+      };
+    },
+    countBetween: function(start, end) {
+      return {
+        numericState: 6
+      };
+    },
+  },
+};
+
+// Mock items object with getItem method
+const items = {
+  getItem: function(itemName) {
+    if (itemName === parameters.priceItem) {
+      return priceItem;
+    }
+    if (itemName === parameters.forecastItem) {
+      return forecastItem;
+    }
+    // Handle other items if necessary
+    return null;
+  },
+};
+
+// Override openHAB items with mock.
+global.items = items;
 
 // Mock GenericOptimizer service and the test data for it
 const mockControlPoints = require('./test-data/control-points-2023-11-08-with-gaps.json');
@@ -33,7 +77,7 @@ const mockHeatingCalculator = {
 
 // Common parameters used in the tests.
 const parameters = {
-  priceItem:    'some_price_item',
+  priceItem:    'mockPriceItem',
   forecastItem: 'some_forecast_item',
   numberOfPeriods: 4,
   dropThreshold:   3,
@@ -51,7 +95,6 @@ const parameters = {
 // Helper function to reset the environment between tests
 function createHeatingPeriodOptimizer(start, end, params) {
   return new HeatingPeriodOptimizer(
-    mockInflux,
     mockGenericOptimizer,
     mockHeatingCalculator,
     start,
@@ -101,7 +144,7 @@ function testConstructor() {
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
-  assertEqual(mockGenericOptimizer.prices, mockPriceData, "genericOptimizer.setPrices should receive correct data from influx.getPoints");
+  assertEqual(mockGenericOptimizer.prices, mockPriceData, "genericOptimizer.setPrices should receive correct data");
 }
 
 
@@ -396,7 +439,7 @@ function testGetShortPeriodShiftDirectionRestrictedShift() {
   const direction = heatingPeriodOptimizer.getShortPeriodShiftDirection(currentGap, previousGap);
 
   // Assert that no shifting is allowed due to shiftPriceLimit
-  assertEqual(direction, null, "No shift should be allowed when price difference exceeds shiftPriceLimit.");
+  assertBoolean(direction, false, "No shift should be allowed when price difference exceeds shiftPriceLimit.");
 }
 
 /**
@@ -545,10 +588,9 @@ module.exports = {
   testFindGaps,
   testGetShortPeriodShiftNoDirections,
   testGetShortPeriodShiftOnlyOneDirectionPossible,
-  //testGetShortPeriodShiftNoPeriodsOnLeft,
-  //  testGetShortPeriodShiftDirectionComparePrices,
-  //testGetShortPeriodShiftDirectionAllowedShift,
-  //testGetShortPeriodShiftDirectionRestrictedShift,
+  testGetShortPeriodShiftDirectionComparePrices,
+  testGetShortPeriodShiftDirectionAllowedShift,
+  testGetShortPeriodShiftDirectionRestrictedShift,
   testMergeLongPeriodWithTwoGaps,
   testShiftHeatingLeft,
   testShiftHeatingRight
