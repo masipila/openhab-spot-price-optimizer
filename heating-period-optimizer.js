@@ -53,6 +53,7 @@ class HeatingPeriodOptimizer {
     // Optional parameters.
     this.dropThreshold     = parameters.dropThreshold;
     this.shortThreshold    = parameters.shortThreshold;
+    this.periodOverlap     = (parameters.periodOverlap == undefined) ? 0 : parameters.periodOverlap;
     this.flexDefault       = (parameters.flexDefault == undefined)   ? 0 : parameters.flexDefault;
     this.flexThreshold     = (parameters.flexThreshold == undefined) ? 0 : parameters.flexThreshold;
     this.gapThreshold      = (parameters.gapThreshold == undefined)  ? 0 : parameters.gapThreshold;
@@ -172,12 +173,12 @@ class HeatingPeriodOptimizer {
       let a = this.periods[i].getStart();
       let b = this.periods[i].getEnd();
 
-      // Allow the mid-day periods to slide by +/- 1 hour to get better results.
+      // Allow the mid-day periods to overlap.
       if (i > 1) {
-        a = a.minusHours(1);
+        a = a.minusHours(this.periodOverlap);
       }
       if (i < this.numberOfPeriods) {
-        b = b.plusHours(1);
+        b = b.plusHours(this.periodOverlap);
       }
 
       this.genericOptimizer.allowInPieces(nonFlexHours, a, b);
