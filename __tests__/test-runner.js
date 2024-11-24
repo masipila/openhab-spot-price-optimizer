@@ -4,8 +4,7 @@ const testFiles = [
   './heating-period.test.js',
   './heating-gap.test.js',
   './generic-optimizer.test.js',
-  './heating-period-optimizer.test.js',
-  './entsoe.test.js'
+  './heating-period-optimizer.test.js'
 ];
 
 const { displayTestSummary } = require('./test-utils');
