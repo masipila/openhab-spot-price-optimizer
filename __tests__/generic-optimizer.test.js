@@ -16,9 +16,31 @@ const { GenericOptimizer } = require('openhab-spot-price-optimizer/generic-optim
 function testConstructor() {
   const optimizer = new GenericOptimizer();
   const expectedResolution = time.Duration.parse("PT15M");
-
   assertEqualTime(optimizer.getResolution(), expectedResolution, "Default resolution should be PT15M");
   assertBoolean(optimizer.error, false, "Error flag should be false by default");
+}
+
+/**
+ */
+function testNormalizePrices() {
+  const optimizer = new GenericOptimizer();
+  const expected = require('./test-data/prices-2023-11-08-result-pt15m.json');
+
+  const pt60m = require('./test-data/prices-2023-11-08-pt60m.json');
+  let actual = optimizer.normalizePrices(pt60m);
+  assertEqual(JSON.stringify(actual), JSON.stringify(expected), "PT60M prices should be normalized to PT15M resolution");
+
+  const pt30m = require('./test-data/prices-2023-11-08-pt30m.json');
+  actual = optimizer.normalizePrices(pt30m);
+  assertEqual(JSON.stringify(actual), JSON.stringify(expected), "PT30M prices should be normalized to PT15M resolution");
+
+  const pt15m = require('./test-data/prices-2023-11-08-pt15m.json');
+  actual = optimizer.normalizePrices(pt15m);
+  assertEqual(JSON.stringify(actual), JSON.stringify(expected), "PT15M prices should be normalized to expected structure");
+
+  const pt20m = require('./test-data/prices-2023-11-08-pt20m.json');
+  actual = optimizer.normalizePrices(pt20m);
+  assertBoolean(optimizer.error, true, "Unexpected resolution should raise the error flag.");
 }
 
 /**
@@ -35,15 +57,16 @@ function testConstructor() {
  */
 function testSetPrices() {
   const optimizer = new GenericOptimizer();
-  const mockPrices = require('./test-data/prices-2023-11-08.json');
+  const mockPrices = require('./test-data/prices-2023-11-08-pt60m.json');
+  const expectedPrices = require('./test-data/prices-2023-11-08-result-pt15m.json');
   const expectedDuration = time.Duration.ofHours(24);
 
   optimizer.setPrices(mockPrices);
 
-  assertEqual(JSON.stringify(optimizer.prices), JSON.stringify(mockPrices), "Prices should be set correctly");
+  assertEqual(JSON.stringify(optimizer.prices), JSON.stringify(expectedPrices), "Prices should be set correctly");
   assertEqual(optimizer.error, false, "Error flag should remain false");
-  assertEqualTime(optimizer.priceStart, time.toZDT(mockPrices[0].datetime), "Price start should be set correctly");
-  assertEqualTime(optimizer.priceEnd, time.toZDT(mockPrices[mockPrices.length - 1].datetime).plus(optimizer.getResolution()), "Price end should be set correctly");
+  assertEqualTime(optimizer.priceStart, time.toZDT(expectedPrices[0].datetime), "Price start should be set correctly");
+  assertEqualTime(optimizer.priceEnd, time.toZDT(expectedPrices[expectedPrices.length - 1].datetime).plus(optimizer.getResolution()), "Price end should be set correctly");
   assertEqualTime(optimizer.priceWindowDuration, expectedDuration, "Price window duration should be PT24H");
 }
 
@@ -92,104 +115,104 @@ function testOptimizationsInvalidRequests() {
   optimizer.setPrices(mockPrices);
   optimizer.allowInPieces();
   optimizer.blockAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test allowInPieces with negative duration.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.allowInPieces(-1);
   optimizer.blockAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test blockInPieces with undefined duration.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.blockInPieces();
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test blockInPieces with negative duration.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.blockInPieces(-1);
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test allowPeriod with undefined duration.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.allowPeriod();
   optimizer.blockAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test allowPeriod with negative duration.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.allowPeriod(-1);
   optimizer.blockAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test blockPeriod with undefined duration.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.blockPeriod();
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test blockPeriod with negative duration.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.blockPeriod(-1);
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test allowIndividualHours with undefined duration.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.allowIndividualHours();
   optimizer.blockAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test allowIndividualHours with negative duration.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.allowIndividualHours(-1);
   optimizer.blockAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test blockIndividualHours with undefined duration.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.blockIndividualHours();
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test allowIndividualHours with negative duration.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.blockIndividualHours(-1);
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test optimizeInPieces with invalid operation.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.optimizeInPieces('foo', 5);
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test optimizeInPieces with undefined operation.
   mockPrices = require('./test-data/prices-random.json');
@@ -197,24 +220,24 @@ function testOptimizationsInvalidRequests() {
   let operation;
   optimizer.optimizeInPieces(operation, 5);
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test optimizePeriod with invalid operation.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.optimizePeriod('foo', 5);
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test optimizePeriod with undefined operation.
   mockPrices = require('./test-data/prices-random.json');
   optimizer.setPrices(mockPrices);
   optimizer.optimizePeriod(operation, 5);
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
-  assertNull(actual, "No control points added for invalid request.");
+  actual = optimizer.getControlPoints().size;
+  assertEqual(actual, 0, "No control points added for invalid request.");
 }
 
 /**
@@ -244,7 +267,7 @@ function testOptimizationsZeroDuration() {
   optimizer.setPrices(mockPrices);
   optimizer.allowInPieces(0);
   optimizer.blockAllRemaining();
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-all-blocked.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 
@@ -253,7 +276,7 @@ function testOptimizationsZeroDuration() {
   optimizer.setPrices(mockPrices);
   optimizer.blockInPieces(0);
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-all-allowed.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 
@@ -262,7 +285,7 @@ function testOptimizationsZeroDuration() {
   optimizer.setPrices(mockPrices);
   optimizer.allowPeriod(0);
   optimizer.blockAllRemaining();
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-all-blocked.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 
@@ -271,7 +294,7 @@ function testOptimizationsZeroDuration() {
   optimizer.setPrices(mockPrices);
   optimizer.blockPeriod(0);
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-all-allowed.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 
@@ -280,7 +303,7 @@ function testOptimizationsZeroDuration() {
   optimizer.setPrices(mockPrices);
   optimizer.allowIndividualHours(0);
   optimizer.blockAllRemaining();
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-all-blocked.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 
@@ -289,7 +312,7 @@ function testOptimizationsZeroDuration() {
   optimizer.setPrices(mockPrices);
   optimizer.blockIndividualHours(0);
   optimizer.allowAllRemaining();
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-all-allowed.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 }
@@ -316,7 +339,7 @@ function testOptimizationsInPieces() {
 
   // Allow 1.5 hours
   optimizer.allowInPieces(1.5);
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-1a.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 
@@ -324,13 +347,13 @@ function testOptimizationsInPieces() {
   const startConstraint = time.toZDT('2024-01-14T09:30');
   const endConstraint = time.toZDT('2024-01-14T11:30');
   optimizer.allowInPieces(1.1, startConstraint, endConstraint);
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-1b.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 
   // Block 2 hours
   optimizer.blockInPieces(2);
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-1c.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 }
@@ -357,7 +380,7 @@ function testOptimizationsInPeriods() {
 
   // Allow 1.5 hours
   optimizer.allowPeriod(1.5);
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-2a.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 
@@ -365,13 +388,13 @@ function testOptimizationsInPeriods() {
   const startConstraint = time.toZDT('2024-01-14T09:30');
   const endConstraint = time.toZDT('2024-01-14T14:00');
   optimizer.allowPeriod(1.1, startConstraint, endConstraint);
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-2b.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 
   // Block 2 hours
   optimizer.blockPeriod(2);
-  actual = optimizer.getControlPoints();
+  actual = optimizer.getControlPoints().states;
   expected = require('./test-data/control-points-2c.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 }
@@ -379,6 +402,7 @@ function testOptimizationsInPeriods() {
 // Export the test functions
 module.exports = {
   testConstructor,
+  testNormalizePrices,
   testSetPrices,
   testSetPricesWithEmptyData,
   testOptimizationsInvalidRequests,
