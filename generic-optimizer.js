@@ -306,6 +306,12 @@ class GenericOptimizer {
    *   Optional. Latest possible end time.
    */
   optimizeInPieces(operation, hours, startConstraint = null, endConstraint = null) {
+    // Early exit if previous errors have been flagged.
+    if (this.error) {
+      console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
+      return null;
+    }
+
     // Early exit if invalid operation is requested.
     if (operation != 'allow' && operation != 'block') {
       console.error("generic-optmizer.js: operation argument must be either 'allow' or 'block'.");
@@ -314,11 +320,6 @@ class GenericOptimizer {
     }
     // Early exit if negative number of hours is requested.
     if (!this.validateRequestedHours(hours)) {
-      return null;
-    }
-    // Early exit if previous errors have been flagged.
-    if (this.error) {
-      console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
       return null;
     }
 
@@ -393,6 +394,11 @@ class GenericOptimizer {
    *   Optional. Latest possible end time.
    */
   optimizePeriod(operation, hours, startConstraint=null, endConstraint=null) {
+    // Early exit if previous errors have been flagged.
+    if (this.error) {
+      console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
+      return null;
+    }
     // Early exit if invalid operation is requested.
     if (operation != 'allow' && operation != 'block') {
       console.error("generic-optmizer.js: operation argument must be either 'allow' or 'block'.");
@@ -402,11 +408,6 @@ class GenericOptimizer {
     // Early exit if negative number of hours is requested.
     if (!this.validateRequestedHours(hours)) {
       this.error = true;
-      return null;
-    }
-    // Early exit if previous errors have been flagged.
-    if (this.error) {
-      console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
       return null;
     }
     // Early exit (without error flag), if requested duration is 0.
@@ -469,16 +470,16 @@ class GenericOptimizer {
   setAllRemaining(operation, startConstraint=null, endConstraint=null) {
     console.log(`generic-optimizer.js: ${operation} all remaining...`);
 
+    // Early exit if previous errors have been flagged.
+    if (this.error) {
+      console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
+      return null;
+    }
+
     // Early exit if invalid operation is requested.
     if (operation != 'allow' && operation != 'block') {
       console.error("generic-optmizer.js: operation argument must be either 'allow' or 'block'.");
       this.error = true;
-      return null;
-    }
-
-    // Early exit if previous errors have been flagged.
-    if (this.error) {
-      console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
       return null;
     }
 
@@ -578,6 +579,12 @@ class GenericOptimizer {
   calculatePeriodPrices(duration, sort='asc', startConstraint=null, endConstraint=null) {
     let periodPrices = [];
 
+    // Early exit if prices are not available.
+    if (this.error) {
+      console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
+      return periodPrices;
+    }
+
     // Early exit if duration is zero.
     if (duration.isZero()) {
       return periodPrices;
@@ -589,12 +596,6 @@ class GenericOptimizer {
     }
     if (endConstraint == null) {
       endConstraint = this.priceEnd;
-    }
-
-    // Early exit if prices are not available.
-    if (this.error) {
-      console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
-      return periodPrices;
     }
 
     // Early exit if duration is 0.
@@ -716,9 +717,8 @@ class GenericOptimizer {
     // Early exit if there have been errors.
     if (this.error) {
       console.error("generic-optimizer.js: Aborting optimization, see previous errors!");
-      return null;
+      return ts;
     }
-
     for (let i = 0; i < this.prices.length; i++) {
       let zdt = time.toZDT(this.prices[i].datetime);
       let value = String(this.prices[i].control);
