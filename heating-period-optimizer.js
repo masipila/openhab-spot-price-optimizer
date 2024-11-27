@@ -4,8 +4,11 @@
  * Copyright Markus Sipilä 2024. Published under Eclipse Public Licence v 2.0.
  */
 
-const HeatingPeriod = require('./heating-period.js');
-const HeatingGap    = require('./heating-gap.js');
+const { GenericOptimizer }  = require('./generic-optimizer.js');
+const { HeatingCalculator } = require('./heating-calculator.js');
+const { HeatingPeriod }     = require('./heating-period.js');
+const { HeatingGap }        = require('./heating-gap.js');
+const { ValidationHelper }  = require('./validation-helper');
 
 class HeatingPeriodOptimizer {
 
@@ -23,55 +26,48 @@ class HeatingPeriodOptimizer {
    * @param object parameters
    *   Parameters object.
    */
-  constructor(genericOptimizer, heatingCalculator, start, end, parameters) {
+  constructor(start, end, parameters) {
     console.log('heating-period-optimizer.js: Starting heating period optimizer...');
     console.log('-----------------------------------------------------------------');
-    this.genericOptimizer  = genericOptimizer;
-    this.heatingCalculator = heatingCalculator;
-
-    // Validate start and end and early exit if invalid.
-    if (end.isBefore(start)) {
-      console.error("heating-period-optimizer.js: period end can't be before period start!");
-      this.error = true;
-      return null;
-    }
-
-    // Validate parameters and early exit if invalid.
-    this.error = (this.validateParameters(parameters)) ? false : true;
-    if (this.error) {
-      return null;
-    }
-
-    // Required parameters.
-    this.start             = start;
-    this.end               = end;
-    this.priceItem         = items.getItem(parameters.priceItem);
-    this.forecastItem      = items.getItem(parameters.forecastItem);
-    this.numberOfPeriods   = parameters.numberOfPeriods;
-    this.heatCurve         = parameters.heatCurve;
-
-    // Optional parameters.
-    this.dropThreshold     = parameters.dropThreshold;
-    this.shortThreshold    = parameters.shortThreshold;
-    this.periodOverlap     = (parameters.periodOverlap == undefined) ? 0 : parameters.periodOverlap;
-    this.flexDefault       = (parameters.flexDefault == undefined)   ? 0 : parameters.flexDefault;
-    this.flexThreshold     = (parameters.flexThreshold == undefined) ? 0 : parameters.flexThreshold;
-    this.gapThreshold      = (parameters.gapThreshold == undefined)  ? 0 : parameters.gapThreshold;
-    this.shiftPriceLimit   = (parameters.shiftPriceLimit == undefined) ? 0 : parameters.shiftPriceLimit;
-
-    // Read prices, validate them and pass them to GenericOptimizer.
-    const pricePoints = this.priceItem.persistence.countBetween(this.start, this.end);
-    const duration = time.Duration.between(this.start, this.end).toHours();
-
-    if (pricePoints < duration) {
-      console.error('heating-period-optimizer.js: Prices not available, aborting optimization!');
-      this.error = true;
-      return null;
-    }
-
-    let prices = this.priceItem.persistence.getAllStatesBetween(this.start, this.end);
-    this.genericOptimizer.setPrices(prices);
+    this.genericOptimizer  = new GenericOptimizer;
+    this.heatingCalculator = new HeatingCalculator;
+    this.validator         = new ValidationHelper;
     this.periods = [];
+    this.error = false;
+
+    // Validate parameters.
+    if (!this.validateParameters(start, end, parameters)) {
+      this.error = true;
+    }
+
+    // Only proceed with remaining initialization if all validations passed.
+    if (!this.error) {
+      this.start             = start;
+      this.end               = end;
+      this.priceItem         = items.getItem(parameters.priceItem);
+      this.forecastItem      = items.getItem(parameters.forecastItem);
+      this.numberOfPeriods   = parameters.numberOfPeriods;
+      this.heatCurve         = parameters.heatCurve;
+      this.dropThreshold     = parameters.dropThreshold;
+      this.shortThreshold    = parameters.shortThreshold;
+      this.periodOverlap     = (parameters.periodOverlap == undefined) ? 0 : parameters.periodOverlap;
+      this.flexDefault       = (parameters.flexDefault == undefined)   ? 0 : parameters.flexDefault;
+      this.flexThreshold     = (parameters.flexThreshold == undefined) ? 0 : parameters.flexThreshold;
+      this.gapThreshold      = (parameters.gapThreshold == undefined)  ? 0 : parameters.gapThreshold;
+      this.shiftPriceLimit   = (parameters.shiftPriceLimit == undefined) ? 0 : parameters.shiftPriceLimit;
+
+      // Read prices, validate them and pass them to GenericOptimizer.
+      const pricePoints = this.priceItem.persistence.countBetween(this.start, this.end);
+      const duration = time.Duration.between(this.start, this.end).toHours();
+
+      if (pricePoints < duration) {
+        console.error('heating-period-optimizer.js: Prices not available, aborting optimization!');
+        this.error = true;
+      }
+
+      let prices = this.priceItem.persistence.getAllStatesBetween(this.start, this.end);
+      this.genericOptimizer.setPrices(prices);
+    }
   }
 
   /**
@@ -104,7 +100,7 @@ class HeatingPeriodOptimizer {
     for (let i=-1; i < (this.numberOfPeriods + 2); i++) {
       let periodStart = this.start.plus(duration.multipliedBy(i));
       let periodEnd = periodStart.plus(duration);
-      let period = new HeatingPeriod.HeatingPeriod(this.heatingCalculator, periodStart, periodEnd, this.forecastItem, this.heatCurve, this.flexDefault, this.flexThreshold);
+      let period = new HeatingPeriod(this.heatingCalculator, periodStart, periodEnd, this.forecastItem, this.heatCurve, this.flexDefault, this.flexThreshold);
       this.periods.push(period);
       console.log(period);
     }
@@ -321,7 +317,7 @@ class HeatingPeriodOptimizer {
 
         // New gap starts now.
         if (gapContinues == false) {
-          gaps.push(new HeatingGap.HeatingGap(points[i], this.genericOptimizer.getResolution()));
+          gaps.push(new HeatingGap(points[i], this.genericOptimizer.getResolution()));
 
           // Set previousHeatingStart and end for the newly created gap.
           gaps[gaps.length-1].setPreviousHeatingStart(previousHeatingStartPoint);
@@ -495,90 +491,69 @@ class HeatingPeriodOptimizer {
 
   /**
    * Validates optimization parameters.
+   *
+   * @param array parameters
+   *
+   * @return boolean
    */
-  validateParameters(parameters) {
-    let isValid = true;
+  validateParameters(start, end, parameters) {
 
-    // numberOfPeriods must be a positive integer
-    if (!Number.isInteger(parameters.numberOfPeriods) || parameters.numberOfPeriods <= 0) {
-      console.error("heating-period-optimizer.js: Validation failed: numberOfPeriods must be a positive integer.");
-      isValid = false;
+    if (end.isBefore(start)) {
+      console.error("heating-period-optimizer.js: period end can't be before period start!");
+      return false;
     }
 
-    // dropThreshold is optional. If set, it must be a number >= 0
-    if (parameters.dropThreshold !== undefined &&
-      (typeof parameters.dropThreshold !== 'number' || parameters.dropThreshold < 0)) {
+    if (!this.validator.validateNumber(parameters.numberOfPeriods, true, 1, 24, true)) {
+      console.error("heating-period-optimizer.js: Validation failed: numberOfPeriods must be a positive integer between 1 and 24 (inclusive).");
+      return false;
+    }
+
+    if (!this.validator.validateNumber(parameters.periodOverlap, false, 0)) {
+      console.error("heating-period-optimizer.js: Validation failed: periodOverlap must be a number >= 0.");
+      return false;
+    }
+
+    if (!this.validator.validateNumber(parameters.dropThreshold, false, 0)) {
       console.error("heating-period-optimizer.js: Validation failed: dropThreshold must be a number >= 0.");
-      isValid = false;
+      return false;
     }
 
-    // dropThreshold is optional. If set, it must be a number >= 0
-    if (parameters.shortThreshold !== undefined &&
-      (typeof parameters.shortThreshold !== 'number' || parameters.shortThreshold < 0)) {
+    if (!this.validator.validateNumber(parameters.shortThreshold, false, 0)) {
       console.error("heating-period-optimizer.js: Validation failed: shortThreshold must be a number >= 0.");
-      isValid = false;
+      return false;
     }
 
-    // flexDefault is optional. If set, it must be a number between 0 and 1 (inclusive)
-    if (parameters.flexDefault !== undefined &&
-      (typeof parameters.flexDefault !== 'number' || parameters.flexDefault < 0 || parameters.flexDefault > 1)) {
+    if (!this.validator.validateNumber(parameters.flexDefault, false, 0, 1)) {
       console.error("heating-period-optimizer.js: Validation failed: flexDefault must be a number between 0 and 1 (inclusive).");
-      isValid = false;
+      return false;
     }
 
-    // flexThreshold is optional. If set, it must be a number >= 0
-    if (parameters.flexThreshold !== undefined &&
-      (typeof parameters.flexThreshold !== 'number' || parameters.flexThreshold < 0)) {
+    if (!this.validator.validateNumber(parameters.flexThreshold, false, 0)) {
       console.error("heating-period-optimizer.js: Validation failed: flexThreshold must be a number >= 0.");
-      isValid = false;
+      return false;
     }
 
-    // gapThreshold is optional. If set, it must be a number >= 0
-    if (parameters.gapThreshold !== undefined &&
-      (typeof parameters.gapThreshold !== 'number' || parameters.gapThreshold < 0)) {
+    if (!this.validator.validateNumber(parameters.gapThreshold, false, 0)) {
       console.error("heating-period-optimizer.js: Validation failed: gapThreshold must be a number >= 0.");
-      isValid = false;
+      return false;
     }
 
-    // shiftPriceLimit is optional. If set, it must be a number >= 0
-    if (parameters.shiftPriceLimit !== undefined &&
-      (typeof parameters.shiftPriceLimit !== 'number' || parameters.shiftPriceLimit < 0)) {
+    if (!this.validator.validateNumber(parameters.shiftPriceLimit, false, 0)) {
       console.error("heating-period-optimizer.js: Validation failed: shiftPriceLimit must be a number >= 0.");
-      isValid = false;
+      return false;
     }
 
-    // priceItem must be a non-empty string
-    if (typeof parameters.priceItem !== 'string' || parameters.priceItem.trim() === "") {
-      console.error("heating-period-optimizer.js: Validation failed: priceItem must be a non-empty string.");
-      isValid = false;
+    if (!this.validator.validateItemParameters(parameters)) {
+      return false;
+    }
+    if (!this.validator.validateHeatCurve(parameters.heatCurve)) {
+      return false;
     }
 
-    // forecastItem must be a non-empty string
-    if (typeof parameters.forecastItem !== 'string' || parameters.forecastItem.trim() === "") {
-      console.error("heating-period-optimizer.js: Validation failed: forecastItem must be a non-empty string.");
-      isValid = false;
-    }
-
-    // heatCurve must be an array with length 2
-    if (!Array.isArray(parameters.heatCurve) || parameters.heatCurve.length !== 2) {
-      console.error("heating-period-optimizer.js: Validation failed: heatCurve must be an array with 2 points.");
-      isValid = false;
-    }
-    else {
-      // All heatCurve must have temperature and hour attributes.
-      for (let i = 0; i < parameters.heatCurve.length; i++) {
-        if (!parameters.heatCurve[i].hasOwnProperty('temperature')) {
-          console.error("heating-period-optimizer.js: Validation failed: heatCurve points must have temperature!");
-          isValid = false;
-        }
-        if (!parameters.heatCurve[i].hasOwnProperty('hours')) {
-          console.error("heating-period-optimizer.js: Validation failed: heatCurve points must have number of hours!");
-          isValid = false;
-        }
-      }
-    }
-    return isValid;
+    // All validations passed.
+    return true;
   }
+
 }
 
 /**
