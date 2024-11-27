@@ -15,10 +15,6 @@ class HeatingPeriodOptimizer {
   /**
    * Constructor.
    *
-   * @param GenericOptimizer genericOptimzer
-   *   GenericOptimizer service.
-   * @param HeatingCalculator heatingCalculator
-   *   HeatingCalculator service.
    * @param ZonedDateTime start
    *   Start of the optimization period.
    * @param ZonedDateTime end
