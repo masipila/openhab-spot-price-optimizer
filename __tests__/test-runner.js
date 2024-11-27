@@ -4,6 +4,7 @@ const testFiles = [
   './heating-period.test.js',
   './heating-gap.test.js',
   './generic-optimizer.test.js',
+  './validation-helper.test.js',
   './heating-period-optimizer.test.js'
 ];
 
