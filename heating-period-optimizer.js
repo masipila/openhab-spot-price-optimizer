@@ -51,6 +51,7 @@ class HeatingPeriodOptimizer {
       this.flexThreshold     = (parameters.flexThreshold == undefined) ? 0 : parameters.flexThreshold;
       this.gapThreshold      = (parameters.gapThreshold == undefined)  ? 0 : parameters.gapThreshold;
       this.shiftPriceLimit   = (parameters.shiftPriceLimit == undefined) ? 0 : parameters.shiftPriceLimit;
+      this.adjustment        = (parameters.heatingNeedAdjustment == undefined) ? 0 : parameters.heatingNeedAdjustment;
 
       // Read prices, validate them and pass them to GenericOptimizer.
       const pricePoints = this.priceItem.persistence.countBetween(this.start, this.end);
@@ -77,6 +78,7 @@ class HeatingPeriodOptimizer {
     }
 
     this.calculateHeatingNeeds();
+    this.adjustHeatingNeeds();
     this.adjustHeatingNeedForTemperatureDrops();
     this.allocateNonFlexHeatingNeeds();
     this.allocateFlexHeatingNeeds();
@@ -91,6 +93,7 @@ class HeatingPeriodOptimizer {
   calculateHeatingNeeds() {
     console.log('heating-period-optimizer.js: Calculating heating need for the heating periods.');
     const duration = time.Duration.between(this.start, this.end).dividedBy(this.numberOfPeriods);
+    const adjustmentPerPeriod = this.adjustment / this.numberOfPeriods;
 
     // Calculate the need also for the -1, +1 and +2 periods for heating need compensations.
     for (let i=-1; i < (this.numberOfPeriods + 2); i++) {
@@ -99,6 +102,21 @@ class HeatingPeriodOptimizer {
       let period = new HeatingPeriod(this.heatingCalculator, periodStart, periodEnd, this.forecastItem, this.heatCurve, this.flexDefault, this.flexThreshold);
       this.periods.push(period);
       console.log(period);
+    }
+  }
+
+  /**
+   * Adjusts the heating need based on heating need adjustment factor.
+   */
+  adjustHeatingNeeds() {
+    if (this.adjustment != 0) {
+      const periodAdjustment = this.adjustment / this.numberOfPeriods;
+      console.log(`heating-period-optimizer.js: Applying heating need adjustment ${periodAdjustment}h for each period.`);
+      for (let i = 0; i < this.periods.length; i++) {
+        var need = this.periods[i].getHeatingNeed() + periodAdjustment;
+        this.periods[i].setHeatingNeed(need);
+        console.log(this.periods[i]);
+      }
     }
   }
 
