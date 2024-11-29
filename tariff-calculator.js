@@ -43,7 +43,7 @@ class TariffCalculator {
     }
 
     let current = start;
-    while (current.isBefore(end)) {
+    while (!current.isAfter(end)) {
       let price;
       if (product == 'night') {
         price = this.calculatePriceNightDistribution(current, priceParams);
@@ -143,6 +143,10 @@ class TariffCalculator {
     // Early exit if the are mismatch between the spot and distribution prices.
     if (spotPrices.length != distributionPrices.length) {
       console.error(`tariff-calculator.js: Aborting total price calculation! Different number of spot prices (${spotPrices.length}) and distribution prices (${distributionPrices.length})!`);
+      console.log('Spot prices:');
+      console.log(spotPrices);
+      console.log('Distribution prices:');
+      console.log(distributionPrices);
       return ts;
     }
 
