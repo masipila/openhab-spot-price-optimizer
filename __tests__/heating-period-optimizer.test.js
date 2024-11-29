@@ -134,14 +134,16 @@ function createHeatingPeriodOptimizer(start, end, params, serviceFactory = mockS
   );
 }
 
-// Helper function to create mock heating period objects for temperature drop tests.
+// Helper function to create mock heating period objects
 function createMockHeatingPeriod(temp, heatingHours, flexibility) {
   return {
-    getAvgTemp: () => temp,
-    getHeatingNeed: () => heatingHours,
-    setHeatingNeed: function (need) { this.getHeatingNeed = () => need; },
-    setFlexibility: function (flex) { this.flexibility = flex; },
+    temp: temp,
+    heatingNeed: heatingHours,
     flexibility: flexibility,
+    getAvgTemp: function() { return this.temp; },
+    getHeatingNeed: function() { return this.heatingNeed; },
+    setHeatingNeed: function (need) { this.heatingNeed = need; },
+    setFlexibility: function (flex) { this.flexibility = flex; },
     getStart: () => {},
     toString: () => "mocked heating period"
   };
@@ -198,6 +200,214 @@ function testCalculateHeatingNeed() {
   const n = heatingPeriodOptimizer.periods.length;
   assertEqual(heatingPeriodOptimizer.periods.length, parameters.numberOfPeriods + 3, "There should be 3 more heating periods than defined in parameters.");
   assertEqualTime(heatingPeriodOptimizer.periods[0].getEnd(), heatingPeriodOptimizer.periods[1].getStart(), "HeatingPeriods should be adjacent.");
+}
+
+/**
+ * Test: adjustHeatingNeeds with zero adjustment.
+ *
+ * Scenario: The adjustment is zero.
+ *
+ * Expected: Heating needs remain unchanged.
+ */
+function testAdjustHeatingNeeds_NoAdjustment() {
+  const start = time.toZDT('2023-11-08T00:00');
+  const end = start.plusDays(1);
+
+  // Set adjustment to zero
+  const params = { ...parameters, heatingNeedAdjustment: 0 };
+  const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, params);
+
+  // Mock periods with known heating needs
+  heatingPeriodOptimizer.periods = [
+    createMockHeatingPeriod(10, 2, 0.5),
+    createMockHeatingPeriod(5, 3, 0.5),
+    createMockHeatingPeriod(0, 4, 0.5),
+  ];
+
+  // Copy original heating needs for comparison
+  const originalHeatingNeeds = heatingPeriodOptimizer.periods.map(period => period.getHeatingNeed());
+
+  // Call the method under test
+  heatingPeriodOptimizer.adjustHeatingNeeds();
+
+  // Verify that heating needs remain unchanged
+  heatingPeriodOptimizer.periods.forEach((period, index) => {
+    assertEqual(
+      period.getHeatingNeed(),
+      originalHeatingNeeds[index],
+      `Period ${index + 1} heating need should remain unchanged.`
+    );
+  });
+}
+
+/**
+ * Test: adjustHeatingNeeds with positive adjustment.
+ *
+ * Scenario: The adjustment is positive.
+ *
+ * Expected: Heating needs increase by adjustment / numberOfPeriods.
+ */
+function testAdjustHeatingNeeds_PositiveAdjustment() {
+  const start = time.toZDT('2023-11-08T00:00');
+  const end = start.plusDays(1);
+
+  // Set adjustment to a positive value
+  const adjustmentValue = 6;
+  const numberOfPeriods = 3;
+  const params = { ...parameters, heatingNeedAdjustment: adjustmentValue, numberOfPeriods };
+  const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, params);
+
+  // Mock periods with known heating needs
+  heatingPeriodOptimizer.periods = [
+    createMockHeatingPeriod(10, 2, 0.5),
+    createMockHeatingPeriod(5, 3, 0.5),
+    createMockHeatingPeriod(0, 4, 0.5),
+  ];
+
+  // Expected period adjustment
+  const periodAdjustment = adjustmentValue / numberOfPeriods;
+
+  // Original heating needs for comparison
+  const originalHeatingNeeds = heatingPeriodOptimizer.periods.map(period => period.getHeatingNeed());
+
+  // Call the method under test
+  heatingPeriodOptimizer.adjustHeatingNeeds();
+
+  // Verify that heating needs have increased correctly
+  heatingPeriodOptimizer.periods.forEach((period, index) => {
+    const expectedHeatingNeed = originalHeatingNeeds[index] + periodAdjustment;
+    assertEqual(
+      period.getHeatingNeed(),
+      expectedHeatingNeed,
+      `Period ${index + 1} heating need should have increased by ${periodAdjustment}.`
+    );
+  });
+}
+
+/**
+ * Test: adjustHeatingNeeds with negative adjustment.
+ *
+ * Scenario: The adjustment is negative.
+ *
+ * Expected: Heating needs decrease by |adjustment| / numberOfPeriods.
+ */
+function testAdjustHeatingNeeds_NegativeAdjustment() {
+  const start = time.toZDT('2023-11-08T00:00');
+  const end = start.plusDays(1);
+
+  // Set adjustment to a negative value
+  const adjustmentValue = -6;
+  const numberOfPeriods = 3;
+  const params = { ...parameters, heatingNeedAdjustment: adjustmentValue, numberOfPeriods };
+  const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, params);
+
+  // Mock periods with known heating needs
+  heatingPeriodOptimizer.periods = [
+    createMockHeatingPeriod(10, 6, 0.5),
+    createMockHeatingPeriod(5, 5, 0.5),
+    createMockHeatingPeriod(0, 4, 0.5),
+  ];
+
+  // Expected period adjustment
+  const periodAdjustment = adjustmentValue / numberOfPeriods;
+
+  // Original heating needs for comparison
+  const originalHeatingNeeds = heatingPeriodOptimizer.periods.map(period => period.getHeatingNeed());
+
+  // Call the method under test
+  heatingPeriodOptimizer.adjustHeatingNeeds();
+
+  // Verify that heating needs have decreased correctly
+  heatingPeriodOptimizer.periods.forEach((period, index) => {
+    const expectedHeatingNeed = originalHeatingNeeds[index] + periodAdjustment;
+    assertEqual(
+      period.getHeatingNeed(),
+      expectedHeatingNeed,
+      `Period ${index + 1} heating need should have decreased by ${-periodAdjustment}.`
+    );
+  });
+}
+
+/**
+ * Test: adjustHeatingNeeds with adjustment causing negative heating need.
+ *
+ * Scenario: The adjustment is negative and larger than the heating needs.
+ *
+ * Expected: Heating needs should not become negative.
+ */
+function testAdjustHeatingNeeds_AdjustmentToZero() {
+  const start = time.toZDT('2023-11-08T00:00');
+  const end = start.plusDays(1);
+
+  // Set adjustment to a negative value larger than total heating need
+  const adjustmentValue = -15;
+  const numberOfPeriods = 3;
+  const params = { ...parameters, heatingNeedAdjustment: adjustmentValue, numberOfPeriods };
+  const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, params);
+
+  // Mock periods with small heating needs
+  heatingPeriodOptimizer.periods = [
+    createMockHeatingPeriod(10, 2, 0.5),
+    createMockHeatingPeriod(5, 1, 0.5),
+    createMockHeatingPeriod(0, 1, 0.5),
+  ];
+
+  // Expected period adjustment
+  const periodAdjustment = adjustmentValue / numberOfPeriods;
+
+  // Call the method under test
+  heatingPeriodOptimizer.adjustHeatingNeeds();
+
+  // Verify that heating needs do not become negative
+  heatingPeriodOptimizer.periods.forEach((period, index) => {
+    const heatingNeed = period.getHeatingNeed();
+    assertEqual(
+      period.getHeatingNeed(),
+      0,
+      `Period ${index + 1} heating need should be 0 instead of negative.`
+    );
+  });
+}
+
+/**
+ * Test: adjustHeatingNeeds with adjustment causing maximum heating need.
+ *
+ * Scenario: The adjustment is positive and larger than the maximum duration.
+ *
+ * Expected: Heating needs should not become longer than the period.
+ */
+function testAdjustHeatingNeeds_AdjustmentToMax() {
+  const start = time.toZDT('2023-11-08T00:00');
+  const end = start.plusDays(1);
+
+  // Set adjustment to a negative value larger than total heating need
+  const adjustmentValue = 60;
+  const numberOfPeriods = 3;
+  const params = { ...parameters, heatingNeedAdjustment: adjustmentValue, numberOfPeriods };
+  const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, params);
+
+  // Mock periods with small heating needs
+  heatingPeriodOptimizer.periods = [
+    createMockHeatingPeriod(10, 2, 0.5),
+    createMockHeatingPeriod(5, 1, 0.5),
+    createMockHeatingPeriod(0, 1, 0.5),
+  ];
+
+  // Expected period adjustment
+  const periodAdjustment = 24 / numberOfPeriods;
+
+  // Call the method under test
+  heatingPeriodOptimizer.adjustHeatingNeeds();
+
+  // Verify that heating needs do not become negative
+  heatingPeriodOptimizer.periods.forEach((period, index) => {
+    const heatingNeed = period.getHeatingNeed();
+    assertEqual(
+      period.getHeatingNeed(),
+      periodAdjustment,
+      `Period ${index + 1} heating need should be 0 instead of negative.`
+    );
+  });
 }
 
 /**
@@ -613,6 +823,11 @@ function testShiftHeatingRight() {
 module.exports = {
   testConstructor,
   testCalculateHeatingNeed,
+  testAdjustHeatingNeeds_NoAdjustment,
+  testAdjustHeatingNeeds_PositiveAdjustment,
+  testAdjustHeatingNeeds_NegativeAdjustment,
+  testAdjustHeatingNeeds_AdjustmentToZero,
+  testAdjustHeatingNeeds_AdjustmentToMax,
   testNoTemperatureDrops,
   testSignificantTemperatureDrops,
   testSingleTemperatureDrop,

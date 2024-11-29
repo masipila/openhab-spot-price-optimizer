@@ -90,7 +90,6 @@ class HeatingPeriodOptimizer {
   calculateHeatingNeeds() {
     console.log('heating-period-optimizer.js: Calculating heating need for the heating periods.');
     const duration = time.Duration.between(this.start, this.end).dividedBy(this.numberOfPeriods);
-    const adjustmentPerPeriod = this.adjustment / this.numberOfPeriods;
 
     // Calculate the need also for the -1, +1 and +2 periods for heating need compensations.
     for (let i=-1; i < (this.numberOfPeriods + 2); i++) {
@@ -110,7 +109,18 @@ class HeatingPeriodOptimizer {
       const periodAdjustment = this.adjustment / this.numberOfPeriods;
       console.log(`heating-period-optimizer.js: Applying heating need adjustment ${periodAdjustment}h for each period.`);
       for (let i = 0; i < this.periods.length; i++) {
+        // Calculate the new heating need.
         var need = this.periods[i].getHeatingNeed() + periodAdjustment;
+
+        // Ensure the heating need doesn't go out of bounds.
+        if (need < 0) {
+          need = 0;
+        }
+        if (need > (24 / this.numberOfPeriods)) {
+          need = 24/this.numberOfPeriods;
+        }
+
+        // Update the heating need.
         this.periods[i].setHeatingNeed(need);
         console.log(this.periods[i]);
       }
