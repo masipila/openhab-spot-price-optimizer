@@ -4,11 +4,8 @@
  * Copyright Markus Sipilä 2024. Published under Eclipse Public Licence v 2.0.
  */
 
-const { GenericOptimizer }  = require('./generic-optimizer.js');
-const { HeatingCalculator } = require('./heating-calculator.js');
 const { HeatingPeriod }     = require('./heating-period.js');
 const { HeatingGap }        = require('./heating-gap.js');
-const { ValidationHelper }  = require('./validation-helper');
 
 class HeatingPeriodOptimizer {
 
@@ -22,12 +19,12 @@ class HeatingPeriodOptimizer {
    * @param object parameters
    *   Parameters object.
    */
-  constructor(start, end, parameters) {
+  constructor(start, end, parameters, serviceFactory) {
     console.log('heating-period-optimizer.js: Starting heating period optimizer...');
     console.log('-----------------------------------------------------------------');
-    this.genericOptimizer  = new GenericOptimizer;
-    this.heatingCalculator = new HeatingCalculator;
-    this.validator         = new ValidationHelper;
+    this.genericOptimizer  = serviceFactory.get('GenericOptimizer');
+    this.heatingCalculator = serviceFactory.get('HeatingCalculator');
+    this.validator         = serviceFactory.get('ValidationHelper');
     this.periods = [];
     this.error = false;
 

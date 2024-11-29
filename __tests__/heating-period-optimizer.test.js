@@ -1,7 +1,7 @@
 const { assertBoolean, assertEqual, assertEqualTime } = require('./test-utils');
 const { HeatingPeriodOptimizer } = require('openhab-spot-price-optimizer/heating-period-optimizer');
 
-// Create a mock priceItem
+// MOCK ITEMS
 const mockPriceData = require('./test-data/prices-2023-11-08-pt60m.json');
 const priceItem = {
   name: 'mockPriceItem',
@@ -53,7 +53,9 @@ const items = {
 // Override openHAB items with mock.
 global.items = items;
 
-// Mock GenericOptimizer service and the test data for it
+// MOCK SERVICES
+
+// Mock GenericOptimizer service
 const mockControlPoints = require('./test-data/control-points-2023-11-08-with-gaps.json');
 const mockGenericOptimizer = {
   prices: [],
@@ -75,10 +77,40 @@ const mockHeatingCalculator = {
   calculateHeatingHoursLinear: () => 3
 };
 
+// Mock ValidationHelper service
+const mockValidationHelper = {
+  validateNumber: function(input, required, min = null, max = null, mustBeInteger = false) {
+    return true;
+  },
+  validateItemParameters: function(parameters) {
+    return true;
+  },
+  validateHeatCurve: function(heatCurve) {
+    return true;
+  }
+};
+
+// Create a Mock ServiceFactory
+const mockServiceFactory = {
+  get: function(serviceName) {
+    switch (serviceName) {
+      case 'GenericOptimizer':
+        return mockGenericOptimizer;
+      case 'HeatingCalculator':
+        return mockHeatingCalculator;
+      case 'ValidationHelper':
+        return mockValidationHelper;
+      default:
+        throw new Error(`Mock ServiceFactory: Unknown service requested: ${serviceName}`);
+    }
+  }
+};
+
 // Common parameters used in the tests.
 const parameters = {
   priceItem:    'mockPriceItem',
   forecastItem: 'some_forecast_item',
+  controlItem:  'some_control_item',
   numberOfPeriods: 4,
   dropThreshold:   3,
   shortThreshold:  0.5,
@@ -93,13 +125,12 @@ const parameters = {
 };
 
 // Helper function to reset the environment between tests
-function createHeatingPeriodOptimizer(start, end, params) {
+function createHeatingPeriodOptimizer(start, end, params, serviceFactory = mockServiceFactory) {
   return new HeatingPeriodOptimizer(
-    mockGenericOptimizer,
-    mockHeatingCalculator,
     start,
     end,
-    params
+    params,
+    serviceFactory
   );
 }
 
