@@ -2,119 +2,136 @@ const { assertAlmostEqual } = require('./test-utils');
 const { HeatingCalculator } = require('openhab-spot-price-optimizer/heating-calculator');
 
 /**
- * Tests the calculateHeatingHoursLinear method.
+ * Tests the calculateHeatingHoursLinear method with multiple points.
  *
  * Scenario: PT24H period i.e. default multiplier.
  *
- * Expected: The method should return the heating need.
+ * Expected: The method should return the correct heating need by interpolating between the correct points.
  */
-function testCalculateHeatingHoursLinear() {
+function testCalculateHeatingHoursLinearMultiplePoints() {
   const heatingCalculator = new HeatingCalculator();
   const curve = [
     { temperature: -25, hours: 24 },
-    { temperature: 13,  hours: 0 }
-  ];
-  const temperature = 1.52;
-  const result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature);
-  assertAlmostEqual(result, 7.25, 0.01, "Calculate heating hours for temperature 1.52°C with 24H data");
-}
-
-/**
- * Tests the calculateHeatingHoursLinear method.
- *
- * Scenario:
- * - PT24H period i.e. default multiplier.
- * - Upper and lower limits of the heat curve
- *
- * Expected: The method should return the upper / lower limit of heat curve.
- */
-function testCalculateHeatingHoursLinearCurveLimits() {
-  const heatingCalculator = new HeatingCalculator();
-  let curve = [
-    { temperature: -25, hours: 24 },
-    { temperature: 13,  hours: 0 }
+    { temperature: 2,   hours: 7 },
+    { temperature: 13,  hours: 2 }
   ];
 
-  // Lower limit of the curve i.e. max heating.
-  let temperature = -25;
+  // Test temperature between -25 and 2 degrees
+  let temperature = -10;
   let result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature);
-  assertAlmostEqual(result, 24, 0.01, "Calculate heating hours for temperature -25°C with 24H period");
+  let expected = 14.5555; // Calculated interpolation result
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature -10°C with multiple points");
 
-  // Upper limit of the curve i.e. no heating
-  temperature = 13;
+  // Test temperature between 2 and 13 degrees
+  temperature = 8;
   result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature);
-  assertAlmostEqual(result, 0, 0.01, "Calculate heating hours for temperature 13°C with 24H period");
+  expected = 4.2727; // Calculated interpolation result
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature 8°C with multiple points");
 
-  // Upper limit of the curve with always minimum amout of heating
-  curve = [
-    { temperature: -25, hours: 24 },
-    { temperature: 13,  hours: 2 }
-  ];
-  temperature = 30;
+  // Test temperature exactly at a curve point
+  temperature = 2;
   result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature);
-  assertAlmostEqual(result, 2, 0.01, "Calculate heating hours for temperature 30°C with 24H period");
+  expected = 7;
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature 2°C (exact curve point) with multiple points");
+
+  // Test temperature below minimum temperature
+  temperature = -30;
+  result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature);
+  expected = 24; // Max hours at coldest temperature
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature -30°C (below curve) with multiple points");
+
+  // Test temperature above maximum temperature
+  temperature = 20;
+  result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature);
+  expected = 2; // Min hours at warmest temperature
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature 20°C (above curve) with multiple points");
 }
 
 /**
- * Tests the calculateHeatingHoursLinear method.
+ * Tests the calculateHeatingHoursLinear method with multiple points and PT6H period (multiplier 0.25).
  *
- * Scenario: PT6H period i.e. multiplier 0.25.
- *
- * Expected: The method should return the heating need.
+ * Expected: The method should return the correct heating need scaled by the multiplier.
  */
-function testCalculateHeatingHoursLinearPT6H() {
+function testCalculateHeatingHoursLinearMultiplePointsPT6H() {
   const heatingCalculator = new HeatingCalculator();
   const curve = [
     { temperature: -25, hours: 24 },
-    { temperature: 13,  hours: 0 }
+    { temperature: 2,   hours: 7 },
+    { temperature: 13,  hours: 2 }
   ];
-  const temperature = 2.33;
-  const result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature, 0.25);
-  assertAlmostEqual(result, 1.68, 0.01, "Calculate heating hours for temperature 2.33°C with 6H period");
+
+  const multiplier = 0.25; // For a 6-hour period
+
+  // Test temperature between -25 and 2 degrees
+  let temperature = -15;
+  let result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature, multiplier);
+  let expected = 17.7037 * multiplier; // Calculated interpolation result
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature -15°C with multiple points and PT6H period");
+
+  // Test temperature between 2 and 13 degrees
+  temperature = 5;
+  result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature, multiplier);
+  expected = 5.6364 * multiplier; // Calculated interpolation result
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature 5°C with multiple points and PT6H period");
+
+  // Test temperature exactly at a curve point
+  temperature = -25;
+  result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature, multiplier);
+  expected = 24 * multiplier;
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature -25°C (exact curve point) with multiple points and PT6H period");
+
+  // Test temperature below minimum temperature
+  temperature = -30;
+  result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature, multiplier);
+  expected = 24 * multiplier; // Max hours at coldest temperature
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature -30°C (below curve) with multiple points and PT6H period");
+
+  // Test temperature above maximum temperature
+  temperature = 20;
+  result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature, multiplier);
+  expected = 2 * multiplier; // Min hours at warmest temperature
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature 20°C (above curve) with multiple points and PT6H period");
 }
 
 /**
- * Tests the calculateHeatingHoursLinear method.
+ * Tests the calculateHeatingHoursLinear method with a more complex curve.
  *
- * Scenario:
- * - PT6H period i.e. multiplier 0.25.
- * - Upper and lower limits of the heat curve
+ * Scenario: Curve with more points, testing interpolation in different segments.
  *
- * Expected:
- * - The method should return the upper / lower limit of heat curve.
- * - But scaled to the duration of the heating period.
+ * Expected: The method should interpolate correctly in each segment.
  */
-function testCalculateHeatingHoursLinearPT6HCurveLimits() {
+function testCalculateHeatingHoursLinearComplexCurve() {
   const heatingCalculator = new HeatingCalculator();
-  let curve = [
+  const curve = [
     { temperature: -25, hours: 24 },
-    { temperature: 13,  hours: 0 }
+    { temperature: -10, hours: 18 },
+    { temperature: 0,   hours: 12 },
+    { temperature: 10,  hours: 6 },
+    { temperature: 20,  hours: 0 }
   ];
 
-  // Lower limit of the curve i.e. max heating.
-  let temperature = -25;
-  let result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature, 0.25);
-  assertAlmostEqual(result, 6, 0.01, "Calculate heating hours for temperature -25°C with 6H period");
+  // Test temperature between -25 and -10 degrees
+  let temperature = -20;
+  let result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature);
+  let expected = 22; // Calculated interpolation result
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature -20°C with complex curve");
 
-  // Upper limit of the curve i.e. no heating
-  temperature = 13;
-  result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature, 0.25);
-  assertAlmostEqual(result, 0, 0.01, "Calculate heating hours for temperature 13°C with 6H period");
+  // Test temperature between 0 and 10 degrees
+  temperature = 5;
+  result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature);
+  expected = 9; // Calculated interpolation result
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature 5°C with complex curve");
 
-  // Upper limit of the curve with always minimum amout of heating
-  curve = [
-    { temperature: -25, hours: 24 },
-    { temperature: 13,  hours: 2 }
-  ];
-  temperature = 30;
-  result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature, 0.25);
-  assertAlmostEqual(result, 0.5, 0.01, "Calculate heating hours for temperature 30°C with 6H period");
+  // Test temperature exactly at a curve point
+  temperature = 0;
+  result = heatingCalculator.calculateHeatingHoursLinear(curve, temperature);
+  expected = 12;
+  assertAlmostEqual(result, expected, 0.01, "Calculate heating hours for temperature 0°C (exact curve point) with complex curve");
 }
 
 // Export the test functions
 module.exports = {
-  testCalculateHeatingHoursLinear,
-  testCalculateHeatingHoursLinearCurveLimits,
-  testCalculateHeatingHoursLinearPT6H,
-  testCalculateHeatingHoursLinearPT6HCurveLimits
-}
+  testCalculateHeatingHoursLinearMultiplePoints,
+  testCalculateHeatingHoursLinearMultiplePointsPT6H,
+  testCalculateHeatingHoursLinearComplexCurve
+};

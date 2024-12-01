@@ -12,10 +12,11 @@ class HeatingCalculator {
   }
 
   /**
-   * Calculates the number of needed heating hours using a linear curve.
+   * Calculates the number of needed heating hours using a piecewise linear curve.
    *
    * @param array curve
-   *   Array with two temperature-hours pairs defining the heating curve.
+   *   Array of temperature-hours pairs defining the heating curve.
+   *   Must be ordered from coldest to warmest temperatures.
    * @param float temperature
    *   Average temperature of the period.
    * @param float multiplier
@@ -27,38 +28,46 @@ class HeatingCalculator {
   calculateHeatingHoursLinear(curve, temperature, multiplier = 1) {
     console.debug('heating-calculator.js: Calculating number of heating hours with linear curve...');
 
-    // Calculate heat curve based on two constant points.
-    // y = kx + b
-    // x = temperature, y = number of needed hours.
+    let hours;
 
-    const p1 = {
-      x : curve[0].temperature,
-      y : curve[0].hours
-    };
-    const p2 = {
-      x: curve[1].temperature,
-      y: curve[1].hours
-    };
-
-    const k = (p1.y-p2.y) / (p1.x-p2.x);
-    const b = p2.y - (k * p2.x);
-    console.debug(`heating-calculator.js: heat curve = ${k}x + ${b}`);
-
-    let hours = (k * temperature) + b;
-
-    // Use max / min of the curve it the given value is out of range
-    if (temperature < p1.x) {
-      hours = p1.y;
+    // If the temperature is below the lowest point, use the maximum heating hours.
+    if (temperature <= curve[0].temperature) {
+      hours = curve[0].hours;
+      console.debug(`heating-calculator.js: Temperature below curve range. Using maximum hours: ${hours}`);
     }
-    else if (temperature > p2.x) {
-      hours = p2.y;
+    // If the temperature is above the highest point, use the minimum heating hours.
+    else if (temperature >= curve[curve.length - 1].temperature) {
+      hours = curve[curve.length - 1].hours;
+      console.debug(`heating-calculator.js: Temperature above curve range. Using minimum hours: ${hours}`);
+    }
+    // Otherwise, find the correct segment and interpolate.
+    else {
+      // Iterate through the curve to find the correct segment.
+      for (let i = 0; i < curve.length - 1; i++) {
+        let t1 = curve[i].temperature;
+        let t2 = curve[i + 1].temperature;
+
+        // Check if the temperature falls between two points.
+        if (temperature >= t1 && temperature <= t2) {
+          let y1 = curve[i].hours;
+          let y2 = curve[i + 1].hours;
+
+          // Calculate the slope (k) and intercept (b) for the segment.
+          const k = (y1 - y2) / (t1 - t2);
+          const b = y2 - (k * t2);
+          console.debug(`heating-calculator.js: Heat curve between ${t1}°C and ${t2}°C is y = ${k}x + ${b}`);
+
+          // Calculate the heating hours using the linear equation.
+          hours = (k * temperature) + b;
+          console.debug(`heating-calculator.js: Interpolated hours: ${hours} at temperature: ${temperature}°C`);
+          break;
+        }
+      }
     }
 
-    // Scale the heating need with given multiplier.
-    hours = (multiplier * hours);
-
-    console.debug(`heating-calculator.js: Temperauture: ${temperature}, multiplier: ${multiplier}, heating need: ${hours}`);
-
+    // Scale the heating need with the given multiplier.
+    hours = multiplier * hours;
+    console.debug(`heating-calculator.js: Final heating need: ${hours} hours (multiplier applied)`);
     return hours;
   }
 
