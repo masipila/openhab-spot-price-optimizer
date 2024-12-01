@@ -25,8 +25,8 @@ class GenericOptimizer {
     console.debug("generic-optimizer.js: price data read from persistence:");
     console.debug(prices);
 
-    // Early exit if no prices are available.
-    if (prices.length < 1) {
+    // Early exit if no prices are available. Two points are needed to determine resolution.
+    if (prices.length < 2) {
       this.error = true;
       console.error("generic-optimizer.js: Not enough prices for optimizations!");
       return null;
