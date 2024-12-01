@@ -9,54 +9,66 @@ class TariffCalculator {
   /**
    * Constructor.
    *
-   * @param string resolution
-   *   Use the same resolution that you have for spot prices, e.g. 'PT60M' or 'PT15M'.
+   * @param ZonedDateTime start
+   * @param ZonedDateTime end
+   * @param string product
+   *   Distribution product: 'night' or 'seasonal'
+   * @param object priceParams
+   *   Object with price parameters.
+   * @param object priceItems
+   *   Object with price items
    */
-  constructor(resolution) {
-    this.resolution = time.Duration.parse(resolution);
+  constructor(start, end, product, priceParams, priceItems) {
+    this.start = start;
+    this.end = end;
+    this.product = product;
+    this.priceParams = priceParams;
+    this.priceItems = priceItems;
+
+    // Initialize time series
+    this.distributionPrices = new items.TimeSeries('REPLACE');
+    this.totalPrices        = new items.TimeSeries('REPLACE');
+
+    // Calculate prices.
+    this.calculate();
   }
 
   /**
-   * Returns distribution prices between 'start' and 'end'.
-   *
-   * @param ZonedDateTime start
-   *   Start time
-   * @param ZonedDateTime end
-   *   End time.
-   * @param string product
-   *   Distribution product to use: 'night' or 'seasonal'
-   * @param object priceParams
-   *   Price parameters for given distribution product.
-   *
-   * @return TimeSeries
-   *   TimeSeries of distribution prices.
+   * Calculates distribution and total prices.
    */
-  getPrices(start, end, product, priceParams) {
-    console.log("tariff-calculator.js: Calculating distribution prices...");
-    const ts = new items.TimeSeries('REPLACE');
+  calculate() {
+    console.log("tariff-calculator.js: Calculating distribution and total prices...");
 
     // Early exit for invalid product argument
     const whitelist = ['night', 'seasonal'];
-    if (!whitelist.includes(product)) {
-      console.error("tariff-calculator.js: Invalid distribution product " + product);
-      return ts;
+    if (!whitelist.includes(this.product)) {
+      console.error(`tariff-calculator.js: Invalid distribution product ${this.product}`);
+      return null;
     }
 
-    let current = start;
-    while (!current.isAfter(end)) {
-      let price;
-      if (product == 'night') {
-        price = this.calculatePriceNightDistribution(current, priceParams);
-      }
-      else {
-        price = this.calculatePriceSeasonalDistribution(current, priceParams);
-      }
-      ts.add(current, price.toFixed(2));
-      current = current.plus(this.resolution);
-    }
+    // Read spot prices from persistence
+    const spotPrices = this.priceItems.spotItem.persistence.getAllStatesBetween(start, end);
+    // Calculate distribution price and total price for the same timestamps.
+    for (let i = 0; i < spotPrices.length; i++) {
+      let current = spotPrices[i].timestamp;
 
-    console.debug(ts);
-    return ts;
+      // Calculate distribution price
+      let distributionPrice;
+      switch (this.product) {
+        case 'night':
+          distributionPrice = this.calculatePriceNightDistribution(current, this.priceParams);
+          break;
+        case 'seasonal':
+          distributionPrice = this.calculatePriceSeasonalDistribution(current, this.priceParams);
+          break;
+      }
+      // Calculate total price
+      let totalPrice = spotPrices[i].numericState + distributionPrice;
+
+      // Add points to timeseries
+      this.distributionPrices.add(current, distributionPrice.toFixed(2));
+      this.totalPrices.add(current, totalPrice.toFixed(2));
+    }
   }
 
   /**
@@ -122,45 +134,23 @@ class TariffCalculator {
   }
 
   /**
-   * Returns total elecricity prices by summing spot prices and distribution prices.
-   *
-   * @param ZonedDateTime start
-   * @param ZonedDateTime end
-   * @param Item spotItem
-   * @param Item distributionItem
+   * Returns distribution prices.
    *
    * @return TimeSeries
-   *   TimeSeries for total electricity prices.
    */
-  getTotalPrices(start, end, spotItem, distributionItem) {
-    console.log("tariff-calculator.js: Calculating total price...");
-    const ts = new items.TimeSeries('REPLACE');
-
-    // Read spot and distribution prices from persistence service.
-    const spotPrices = spotItem.persistence.getAllStatesBetween(start, end);
-    const distributionPrices = distributionItem.persistence.getAllStatesBetween(start, end);
-
-    // Early exit if the are mismatch between the spot and distribution prices.
-    if (spotPrices.length != distributionPrices.length) {
-      console.error(`tariff-calculator.js: Aborting total price calculation! Different number of spot prices (${spotPrices.length}) and distribution prices (${distributionPrices.length})!`);
-      console.log('Spot prices:');
-      console.log(spotPrices);
-      console.log('Distribution prices:');
-      console.log(distributionPrices);
-      return ts;
-    }
-
-    // Calculate the total prices.
-    for (let i = 0; i < spotPrices.length; i++) {
-      let datetime = spotPrices[i].timestamp;
-      let spotPrice = spotPrices[i].numericState;
-      let distributionPrice = distributionPrices[i].numericState;
-      let totalPrice = spotPrice + distributionPrice;
-      ts.add(datetime, totalPrice.toFixed(2));
-    }
-    console.debug(ts);
-    return ts;
+  getDistributionPrices() {
+    return this.distributionPrices;
   }
+
+  /**
+   * Returns total prices.
+   *
+   * @return TimeSeries
+   */
+  getTotalPrices() {
+    return this.totalPrices;
+  }
+
 }
 
 /**
