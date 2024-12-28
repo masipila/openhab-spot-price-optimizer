@@ -47,7 +47,7 @@ class TariffCalculator {
     }
 
     // Read spot prices from persistence
-    const spotPrices = this.priceItems.spotItem.persistence.getAllStatesBetween(start, end);
+    const spotPrices = this.priceItems.spotItem.persistence.getAllStatesBetween(this.start, this.end);
     // Calculate distribution price and total price for the same timestamps.
     for (let i = 0; i < spotPrices.length; i++) {
       let current = spotPrices[i].timestamp;
