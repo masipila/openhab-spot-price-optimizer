@@ -12,11 +12,66 @@ class GenericOptimizer {
   constructor() {
     this.prices = [];
     this.resolution = time.Duration.parse('PT15M');
+    this.maxLoad = null;
+    this.deviceLoad = null;
     this.error = false;
   }
 
   /**
+   * Sets the parameters for the optimizer.
+   *
+   * This is the required way to pass the prices and other parameters when
+   * optimizing against price and balancing the load against maxLoad. If you are
+   * optimizing only against price, you can pass the prices either with this
+   * method OR by passing the prices with setPrices().
+   *
+   * @param {Object} parameters - Object containing the following properties:
+   *   - priceItem: {string} Name of the price item (required).
+   *   - start: {ZonedDateTime} Start of the optimization period (required).
+   *   - end: {ZonedDateTime} End of the optimization period (required).
+   *   - loadItem: {string|null} Name of the total load item (optional).
+   *   - maxLoad: {number} Maximum load that must not be exceeded (optional).
+   *   - deviceLoad: {number} Load of the device being optimized (optional).
+    */
+  setParameters(parameters) {
+    // Validate parameters
+    if (!this.validateParameters(parameters)) {
+      this.error = true;
+      return null;
+    }
+
+    // Fetch and normalize prices
+    const priceItem = items.getItem(parameters.priceItem);
+    const prices = priceItem.persistence.getAllStatesBetween(parameters.start, parameters.end);
+    this.setPrices(prices);
+
+    // Optional parameters
+    if ('loadItem' in parameters) {
+      this.maxLoad = parameters.maxLoad;
+      this.deviceLoad = parameters.deviceLoad;
+      const loadItem = items.getItem(parameters.loadItem);
+      const n = loadItem.persistence.countBetween(this.priceStart, this.priceEnd);
+
+      // Overwrite the load with the persisted value if there are values.
+      if (n > 0) {
+        for (let i = 0; i < this.prices.length; i++) {
+          let current = time.toZDT(this.prices[i].datetime);
+          let load = loadItem.persistence.persistedState(current.plusSeconds(1)).numericState;
+          this.prices[i].load = parseFloat(load);
+        }
+      }
+    }
+
+    console.debug("generic-optimizer.js: data after setParameters:");
+    console.debug(JSON.stringify(this.prices));
+  }
+
+  /**
    * Sets the prices array.
+   *
+   * This alternative way to pass the prices to the GenericOptimizer is kept
+   * for backwards compatibility reasons. The recommended way to pass the prices
+   * is to use the setPriceItem method.
    *
    * @param array prices
    *   Array of PersistedItem objects.
@@ -84,7 +139,8 @@ class GenericOptimizer {
       for (let j = 0; j < n; j++) {
         let point = {
           datetime: zdt.format(time.DateTimeFormatter.ISO_INSTANT),
-          value: price
+          value: price,
+          load: 0
         };
         points.push(point);
         zdt = zdt.plus(this.resolution);
@@ -726,6 +782,80 @@ class GenericOptimizer {
     }
     console.debug(ts);
     return ts;
+  }
+
+  /**
+   * Validates the parameters object for setParameters method.
+   *
+   * @param {Object} parameters
+   * @return {boolean}
+   */
+  validateParameters(parameters) {
+    // Check that required properties are present
+    if (!parameters.priceItem || !parameters.start || !parameters.end) {
+      console.error("generic-optimizer.js: Missing required properties: priceItem, start, or end.");
+      return false;
+    }
+
+    // Test that the price item can be loaded
+    const priceItem = items.getItem(parameters.priceItem, true);
+    if (!priceItem) {
+      console.error(`generic-optimizer.js: Price item "${parameters.priceItem}" not found.`);
+      return false;
+    }
+
+    // Check that end is not before start
+    if (parameters.end.isBefore(parameters.start)) {
+      console.error("generic-optimizer.js: 'end' datetime cannot be before 'start' datetime.");
+      return false;
+    }
+
+    // If any of loadItem, maxLoad, deviceLoad is provided, all three must be present
+    const loadRelatedProps = ['loadItem', 'maxLoad', 'deviceLoad'];
+    const hasLoadProps = loadRelatedProps.some(prop => parameters[prop] !== undefined);
+    if (hasLoadProps) {
+      const missingProps = loadRelatedProps.filter(prop => parameters[prop] === undefined);
+      if (missingProps.length > 0) {
+        console.error(`generic-optimizer.js: Missing required properties when using load features: ${missingProps.join(', ')}`);
+        return false;
+      }
+    }
+
+    // If loadItem is provided, test that it can be loaded
+    if (parameters.loadItem) {
+      const loadItem = items.getItem(parameters.loadItem, true);
+      if (!loadItem) {
+        console.error(`generic-optimizer.js: Load item "${parameters.loadItem}" not found.`);
+        return false;
+      }
+    }
+
+    // If maxLoad is provided, it must be a number > 0
+    if (parameters.maxLoad !== undefined) {
+      if (typeof parameters.maxLoad !== 'number' || parameters.maxLoad <= 0) {
+        console.error("generic-optimizer.js: 'maxLoad' must be a number greater than 0.");
+        return false;
+      }
+    }
+
+    // If deviceLoad is provided, it must be a number > 0
+    if (parameters.deviceLoad !== undefined) {
+      if (typeof parameters.deviceLoad !== 'number' || parameters.deviceLoad <= 0) {
+        console.error("generic-optimizer.js: 'deviceLoad' must be a number greater than 0.");
+        return false;
+      }
+    }
+
+    // If deviceLoad is provided, it must be less than maxLoad
+    if (parameters.deviceLoad !== undefined && parameters.maxLoad !== undefined) {
+      if (parameters.deviceLoad >= parameters.maxLoad) {
+        console.error("generic-optimizer.js: 'deviceLoad' must be less than 'maxLoad'.");
+        return false;
+      }
+    }
+
+    // All validations passed
+    return true;
   }
 
   /**
