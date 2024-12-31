@@ -44,6 +44,185 @@ function testNormalizePrices() {
 }
 
 /**
+ * Tests the setParameters method of GenericOptimizer with mocked persistence.
+ *
+ * Scenario: Parameters object include only required properties without
+ * load balancing parameters. Persistence layer for prices is mocked to return
+ * predefined data.
+ *
+ * Expected Result:
+ * - Prices are normalized and set correctly.
+ * - Error flag remains false.
+ * - Price start is set to the start datetime of the first price entry.
+ * - Price end is set to the last price entry, adjusted by the resolution.
+ */
+function testSetParametersWithoutLoadParameters() {
+  // Mock data
+  const mockPrices = require('./test-data/prices-2023-11-08-pt60m.json');
+  const expectedPrices = require('./test-data/prices-2023-11-08-result-pt15m.json');
+  const expectedDuration = time.Duration.ofHours(24);
+
+  // Mock `getAllStatesBetween` method
+  const mockPersistence = {
+    getAllStatesBetween: (start, end) => mockPrices
+  };
+
+  // Mock `items.getItem` to return a mocked priceItem
+  const openHABItems = items;
+  global.items = {
+    getItem: (itemName) => {
+      if (itemName === 'SpotPrices') {
+        return { persistence: mockPersistence };
+      }
+      throw new Error(`Unknown item: ${itemName}`);
+    }
+  };
+
+  // Prepare parameters
+  const parameters = {
+    priceItem: 'SpotPrices',
+    start: time.toZDT("2023-11-07T22:00:00Z"),
+    end: time.toZDT("2023-11-08T22:00:00Z"),
+  };
+
+  // Run the test
+  const optimizer = new GenericOptimizer();
+  optimizer.setParameters(parameters);
+
+  // Assertions
+  assertEqual(JSON.stringify(optimizer.prices), JSON.stringify(expectedPrices), "Prices should be set correctly");
+  assertEqual(optimizer.error, false, "Error flag should remain false");
+  assertEqualTime(optimizer.priceStart, time.toZDT(expectedPrices[0].datetime), "Price start should be set correctly");
+  assertEqualTime(optimizer.priceEnd, time.toZDT(expectedPrices[expectedPrices.length - 1].datetime).plus(optimizer.getResolution()), "Price end should be set correctly");
+
+  // Cleanup
+  global.items = openHABItems;
+}
+
+/**
+ * Tests the setParameters method of GenericOptimizer with mocked persistence and resetLoads parameter.
+ *
+ * Scenario: Load balancing parameters are present, loadReset is true.
+ *
+ * Expected Result:
+ * - Load values in the `prices` property of the optimizer are reset to 0.
+ */
+function testSetParametersWithLoadReset() {
+  // Mock data
+  const mockPrices = require('./test-data/prices-2023-11-08-pt60m.json');
+  const mockLoads = require('./test-data/loads-2023-11-08-pt15m.json');
+
+  // Mock `getAllStatesBetween` method for prices and loads
+  const mockPricePersistence = {
+    getAllStatesBetween: (start, end) => mockPrices,
+  };
+  const mockLoadPersistence = {
+    getAllStatesBetween: (start, end) => mockLoads,
+    countBetween: (start, end) => 96,
+  };
+
+  // Mock `items.getItem` to return mocked priceItem and loadItem
+  const openHABItems = items;
+  global.items = {
+    getItem: (itemName) => {
+      if (itemName === 'SpotPrices') {
+        return { persistence: mockPricePersistence };
+      }
+      if (itemName === 'EstimatedTotalLoads') {
+        return { persistence: mockLoadPersistence };
+      }
+      throw new Error(`Unknown item: ${itemName}`);
+    }
+  };
+
+  // Prepare parameters
+  const parameters = {
+    priceItem: 'SpotPrices',
+    loadItem: 'EstimatedTotalLoads',
+    start: time.toZDT("2023-11-07T22:00:00Z"),
+    end: time.toZDT("2023-11-08T22:00:00Z"),
+    resetLoads: true,
+    maxLoad: 5,
+    deviceLoad: 2,
+  };
+
+  // Run the test
+  const optimizer = new GenericOptimizer();
+  optimizer.setParameters(parameters);
+
+  // Assertions
+  assertEqual(optimizer.prices[16].load, 0, "Load value at index 16 should be reset to 0 when resetLoads is true");
+
+  // Cleanup
+  global.items = openHABItems;
+}
+
+
+/**
+ * Tests the setParameters method of GenericOptimizer with mocked persistence and resetLoads parameter.
+ *
+ * Scenario: Load balancing parameters are present, resetLoads is false.
+ *
+ * Expected Result:
+ * - Load values in the `prices` property contain the persisted values from the mockLoads data.
+ */
+function testSetParametersWithoutLoadReset() {
+  // Mock data
+  const mockPrices = require('./test-data/prices-2023-11-08-pt60m.json');
+  const mockLoads = require('./test-data/loads-2023-11-08-pt15m.json');
+
+  // Mock `getAllStatesBetween` and `countBetween` methods for prices and loads
+  const mockPricePersistence = {
+    getAllStatesBetween: (start, end) => mockPrices,
+  };
+
+  const mockLoadPersistence = {
+    getAllStatesBetween: (start, end) => mockLoads,
+    countBetween: (start, end) => mockLoads.length,
+    persistedState: (datetime) => {
+      const isoString = datetime.toString();
+      const loadEntry = mockLoads.find((entry) => entry.timestamp === isoString);
+      return { numericState: loadEntry.numericState };
+    },
+  };
+
+  // Mock `items.getItem` to return mocked priceItem and loadItem
+  const openHABItems = items;
+  global.items = {
+    getItem: (itemName) => {
+      if (itemName === 'SpotPrices') {
+        return { persistence: mockPricePersistence };
+      }
+      if (itemName === 'EstimatedTotalLoads') {
+        return { persistence: mockLoadPersistence };
+      }
+      throw new Error(`Unknown item: ${itemName}`);
+    },
+  };
+
+  // Prepare parameters
+  const parameters = {
+    priceItem: 'SpotPrices',
+    loadItem: 'EstimatedTotalLoads',
+    start: time.ZonedDateTime.parse("2023-11-07T22:00:00Z"),
+    end: time.ZonedDateTime.parse("2023-11-08T22:00:00Z"),
+    resetLoads: false,
+    maxLoad: 5,
+    deviceLoad: 2,
+  };
+
+  // Run the test
+  const optimizer = new GenericOptimizer();
+  optimizer.setParameters(parameters);
+
+  // Perform the assertion
+  assertEqual(optimizer.prices[16].load, 4, 'Load value at index 16 is 4.');
+
+  // Cleanup
+  global.items = openHABItems;
+}
+
+/**
  * Tests the setPrices method of GenericOptimizer.
  *
  * Scenario: A valid array of datetime-value pairs is passed to the setPrices method.
@@ -116,6 +295,7 @@ function testOptimizationsInvalidRequests() {
   optimizer.allowInPieces();
   optimizer.blockAllRemaining();
   actual = optimizer.getControlPoints().size;
+  console.log("debug 2");
   assertEqual(actual, 0, "No control points added for invalid request.");
 
   // Test allowInPieces with negative duration.
@@ -359,6 +539,78 @@ function testOptimizationsInPieces() {
 }
 
 /**
+ * Tests the allowInPieces and optimizeInPieces methods with load balancing.
+ *
+ * Scenario:
+ * - Cheapest hour alreaday contains 4 kW load. MaxLoad is 5 kW.
+ * - The additional 3 kW load is optimized to the second cheapest hour.
+ *
+ * Expected Result:
+ * - The control points match expected JSON files with correct results.
+ */
+function testOptimizationsInPiecesWithLoadBalancing() {
+  // Mock data
+  const mockPrices = require('./test-data/prices-2023-11-08-pt60m.json');
+  const mockLoads = require('./test-data/loads-2023-11-08-pt15m.json');
+
+  // Mock `getAllStatesBetween` and `countBetween` methods for prices and loads
+  const mockPricePersistence = {
+    getAllStatesBetween: (start, end) => mockPrices,
+  };
+
+  const mockLoadPersistence = {
+    getAllStatesBetween: (start, end) => mockLoads,
+    countBetween: (start, end) => mockLoads.length,
+    persistedState: (datetime) => {
+      const isoString = datetime.toString();
+      const loadEntry = mockLoads.find((entry) => entry.timestamp === isoString);
+      return { numericState: loadEntry.numericState };
+    },
+  };
+
+  // Mock `items.getItem` to return mocked priceItem and loadItem
+  const openHABItems = items;
+  global.items = {
+    getItem: (itemName) => {
+      if (itemName === 'SpotPrices') {
+        return { persistence: mockPricePersistence };
+      }
+      if (itemName === 'EstimatedTotalLoads') {
+        return { persistence: mockLoadPersistence };
+      }
+      throw new Error(`Unknown item: ${itemName}`);
+    }
+  };
+
+  // Prepare parameters
+  const parameters = {
+    priceItem: 'SpotPrices',
+    loadItem: 'EstimatedTotalLoads',
+    start: time.toZDT("2023-11-07T22:00:00Z"),
+    end: time.toZDT("2023-11-08T22:00:00Z"),
+    resetLoads: false,
+    maxLoad: 5,
+    deviceLoad: 3,
+  };
+
+  // Run the test
+  const optimizer = new GenericOptimizer();
+  optimizer.setParameters(parameters);
+
+  let actual;
+  let expected;
+
+  // Allow 1 hours
+  optimizer.allowInPieces(1);
+  optimizer.blockAllRemaining();
+  global.items = openHABItems;
+  actual = optimizer.getControlPoints().states;
+  expected = require('./test-data/control-points-2023-11-08-load-balancing.json');
+  assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
+}
+
+
+/**
  * Tests the allowPeriod, blockPeriod and optimizePeriod methods
  * and the actual calculations.
  *
@@ -403,10 +655,14 @@ function testOptimizationsInPeriods() {
 module.exports = {
   testConstructor,
   testNormalizePrices,
+  testSetParametersWithoutLoadParameters,
+  testSetParametersWithLoadReset,
+  testSetParametersWithoutLoadReset,
   testSetPrices,
   testSetPricesWithEmptyData,
   testOptimizationsInvalidRequests,
   testOptimizationsZeroDuration,
   testOptimizationsInPieces,
+  testOptimizationsInPiecesWithLoadBalancing,
   testOptimizationsInPeriods
 }
