@@ -14,6 +14,7 @@ class GenericOptimizer {
     this.resolution = time.Duration.parse('PT15M');
     this.maxLoad = null;
     this.deviceLoad = null;
+    this.resetLoads = null;
     this.error = false;
   }
 
@@ -49,11 +50,12 @@ class GenericOptimizer {
     if ('loadItem' in parameters) {
       this.maxLoad = parameters.maxLoad;
       this.deviceLoad = parameters.deviceLoad;
+      this.resetLoads = parameters.resetLoads;
       const loadItem = items.getItem(parameters.loadItem);
       const n = loadItem.persistence.countBetween(this.priceStart, this.priceEnd);
 
-      // Overwrite the load with the persisted value if there are values.
-      if (n > 0) {
+      // Overwrite the load with the persisted value if needed.
+      if (n > 0 && this.resetLoads == false) {
         for (let i = 0; i < this.prices.length; i++) {
           let current = time.toZDT(this.prices[i].datetime);
           let load = loadItem.persistence.persistedState(current.plusSeconds(1)).numericState;
@@ -69,9 +71,9 @@ class GenericOptimizer {
   /**
    * Sets the prices array.
    *
-   * This alternative way to pass the prices to the GenericOptimizer is kept
-   * for backwards compatibility reasons. The recommended way to pass the prices
-   * is to use the setPriceItem method.
+   * This is the original way to pass the prices to the GenericOptimizer, and is
+   * kept for backwards compatibility reasons. The recommended way to pass the
+   * prices is to use the setPriceItem method.
    *
    * @param array prices
    *   Array of PersistedItem objects.
@@ -422,12 +424,23 @@ class GenericOptimizer {
       if (current.isEqual(endConstraint) || current.isAfter(endConstraint)) {
         continue;
       }
+      if (operation == 'allow' && this.maxLoad !== null && this.deviceLoad !== null) {
+        if ( (this.prices[i].load + this.deviceLoad) > this.maxLoad) {
+          console.debug(`generic-optimizer.js: ${this.prices[i].datetime} restricted by maxLoad`);
+          continue;
+        }
+      }
       if (remainingDuration.isZero()) {
         break;
       }
 
       this.prices[i].control = controlValue;
       remainingDuration = remainingDuration.minus(this.resolution);
+    }
+
+    // Log a warning if requested duration could not be allocated.
+    if (remainingDuration.compareTo(time.Duration.ZERO) > 0) {
+      console.warn(`generic-optimizer.js: ${remainingDuration} could not be allocated, constraints are too strict!`);
     }
 
     // Return sort by datetime.
@@ -810,8 +823,8 @@ class GenericOptimizer {
       return false;
     }
 
-    // If any of loadItem, maxLoad, deviceLoad is provided, all three must be present
-    const loadRelatedProps = ['loadItem', 'maxLoad', 'deviceLoad'];
+    // If any of loadItem, maxLoad, deviceLoad, resetLoads is provided, they all must be present
+    const loadRelatedProps = ['loadItem', 'maxLoad', 'deviceLoad', 'resetLoads'];
     const hasLoadProps = loadRelatedProps.some(prop => parameters[prop] !== undefined);
     if (hasLoadProps) {
       const missingProps = loadRelatedProps.filter(prop => parameters[prop] === undefined);
