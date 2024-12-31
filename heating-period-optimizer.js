@@ -59,8 +59,7 @@ class HeatingPeriodOptimizer {
         this.error = true;
       }
 
-      let prices = this.priceItem.persistence.getAllStatesBetween(this.start, this.end);
-      this.genericOptimizer.setPrices(prices);
+      this.genericOptimizer.setParameters(parameters);
     }
   }
 

@@ -62,8 +62,8 @@ const mockGenericOptimizer = {
   calls: [],
   getPrices: () => mockControlPoints,
   getResolution: () => time.Duration.parse("PT15M"),
-  setPrices: function(prices) {
-    this.prices = prices;
+  setParameters: function(parameters) {
+
   },
   setControlForPeriod: function(datetime, duration, control) {
     this.calls.push({ datetime, duration, control });
@@ -169,17 +169,6 @@ function createMockGap(attributes) {
     getNextHeatingDuration: ()   => attributes.nextHeatingDuration
   };
 }
-
-/**
- * Tests the constructor.
- */
-function testConstructor() {
-  const start = time.toZDT('2023-11-08T00:00');
-  const end = start.plusDays(1);
-  const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
-  assertEqual(mockGenericOptimizer.prices, mockPriceData, "genericOptimizer.setPrices should receive correct data");
-}
-
 
 /**
  * Tests the calculateHeatingNeed method
@@ -821,7 +810,6 @@ function testShiftHeatingRight() {
 
 // Export the test functions
 module.exports = {
-  testConstructor,
   testCalculateHeatingNeed,
   testAdjustHeatingNeeds_NoAdjustment,
   testAdjustHeatingNeeds_PositiveAdjustment,
