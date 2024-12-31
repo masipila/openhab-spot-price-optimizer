@@ -516,7 +516,7 @@ class GenericOptimizer {
       console.debug('generic-optimizer.js: Optimizing a consecutive period of ' + duration + ' starting at ' + start);
     }
     else {
-      console.error('generic-optimizer.js: Could not optimize a consecutive period of ' + duration + '! No consecutive periods available!');
+      console.warn('generic-optimizer.js: Could not optimize a consecutive period of ' + duration + '! No consecutive periods available!');
       this.error = true;
     }
 
@@ -709,6 +709,15 @@ class GenericOptimizer {
           // console.debug("generic-optimizer.js: " + current + " already has a control value, period starting at " + iterationStart + " not considered.");
           controlFound = true;
           break;
+        }
+
+        // Break out if max load would be exceeded
+        if (sort == 'asc' && this.maxLoad !== null && this.deviceLoad !== null) {
+          if ( (this.prices[j].load + this.deviceLoad) > this.maxLoad) {
+            console.debug(`generic-optimizer.js: ${this.prices[j].datetime} restricted by maxLoad`);
+            controlFound = true;
+            break;
+          }
         }
 
         sum += this.prices[j]['value'];

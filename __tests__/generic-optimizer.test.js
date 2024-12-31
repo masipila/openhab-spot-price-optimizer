@@ -651,6 +651,78 @@ function testOptimizationsInPeriods() {
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
 }
 
+/**
+ * Tests the allowPeriod with load balancing
+ *
+ * Scenario:
+ * - Cheapest hour alreaday contains 4 kW load. MaxLoad is 5 kW.
+ * - The additional 3 kW load is optimized to the second cheapest hour.
+ *
+ * Expected Result:
+ * - The control points match expected JSON files with correct results.
+ */
+function testOptimizationsInPeriodsWithLoadBalancing() {
+  // Mock data
+  const mockPrices = require('./test-data/prices-2023-11-08-pt60m.json');
+  const mockLoads = require('./test-data/loads-2023-11-08-pt15m.json');
+
+  // Mock `getAllStatesBetween` and `countBetween` methods for prices and loads
+  const mockPricePersistence = {
+    getAllStatesBetween: (start, end) => mockPrices,
+  };
+
+  const mockLoadPersistence = {
+    getAllStatesBetween: (start, end) => mockLoads,
+    countBetween: (start, end) => mockLoads.length,
+    persistedState: (datetime) => {
+      const isoString = datetime.toString();
+      const loadEntry = mockLoads.find((entry) => entry.timestamp === isoString);
+      return { numericState: loadEntry.numericState };
+    },
+  };
+
+  // Mock `items.getItem` to return mocked priceItem and loadItem
+  const openHABItems = items;
+  global.items = {
+    getItem: (itemName) => {
+      if (itemName === 'SpotPrices') {
+        return { persistence: mockPricePersistence };
+      }
+      if (itemName === 'EstimatedTotalLoads') {
+        return { persistence: mockLoadPersistence };
+      }
+      throw new Error(`Unknown item: ${itemName}`);
+    }
+  };
+
+  // Prepare parameters
+  const parameters = {
+    priceItem: 'SpotPrices',
+    loadItem: 'EstimatedTotalLoads',
+    start: time.toZDT("2023-11-07T22:00:00Z"),
+    end: time.toZDT("2023-11-08T22:00:00Z"),
+    resetLoads: false,
+    maxLoad: 5,
+    deviceLoad: 3,
+  };
+
+  // Run the test
+  const optimizer = new GenericOptimizer();
+  optimizer.setParameters(parameters);
+
+  let actual;
+  let expected;
+
+  // Allow 1 hours
+  optimizer.allowPeriod(1);
+  optimizer.blockAllRemaining();
+  global.items = openHABItems;
+  actual = optimizer.getControlPoints().states;
+  expected = require('./test-data/control-points-2023-11-08-load-balancing.json');
+  assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Control points should match to correct values.");
+}
+
+
 // Export the test functions
 module.exports = {
   testConstructor,
@@ -664,5 +736,6 @@ module.exports = {
   testOptimizationsZeroDuration,
   testOptimizationsInPieces,
   testOptimizationsInPiecesWithLoadBalancing,
-  testOptimizationsInPeriods
+  testOptimizationsInPeriods,
+  testOptimizationsInPeriodsWithLoadBalancing
 }
