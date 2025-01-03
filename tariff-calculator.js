@@ -1,9 +1,13 @@
 /**
  * Class for calculating distribution prices with Caruna pricing logic.
  *
- * If your grid operator has other pricing logic than this, feel free
- * to post a feature request on openHAB community forum.
+ * Deprecated. Use GenericTariffCalculator instead. This class will be removed
+ * in future versions.
  */
+
+const { Tariff } = require('./tariff.js');
+const { GenericTariffCalculator } = require('./generic-tariff-calculator.js');
+
 class TariffCalculator {
 
   /**
@@ -25,9 +29,8 @@ class TariffCalculator {
     this.priceParams = priceParams;
     this.priceItems = priceItems;
 
-    // Initialize time series
-    this.distributionPrices = new items.TimeSeries('REPLACE');
-    this.totalPrices        = new items.TimeSeries('REPLACE');
+    this.distributionPrices = null;
+    this.totalPrices        = null;
 
     // Calculate prices.
     this.calculate();
@@ -46,91 +49,40 @@ class TariffCalculator {
       return null;
     }
 
-    // Read spot prices from persistence
-    const spotPrices = this.priceItems.spotItem.persistence.getAllStatesBetween(this.start, this.end);
-    // Calculate distribution price and total price for the same timestamps.
-    for (let i = 0; i < spotPrices.length; i++) {
-      let current = spotPrices[i].timestamp;
+    // Transform the parameters to the GenericTariffCalculator format.
+    let params = {
+      start: this.start,
+      end: this.end,
+      spotItem: this.priceItems.spotItem,
+      distributionItem: this.priceItems.distributionItem,
+      totalItem: this.priceItems.totalItem
+    };
 
-      // Calculate distribution price
-      let distributionPrice;
-      switch (this.product) {
-        case 'night':
-          distributionPrice = this.calculatePriceNightDistribution(current, this.priceParams);
-          break;
-        case 'seasonal':
-          distributionPrice = this.calculatePriceSeasonalDistribution(current, this.priceParams);
-          break;
-      }
-      // Calculate total price
-      let totalPrice = spotPrices[i].numericState + distributionPrice;
+    // Use GenericTariffCalculator for calculating the prices.
+    if (this.product == 'night') {
+      params.fallbackPrice = this.priceParams.price1 + this.priceParams.tax;
+      const genericTariffCalculator = new GenericTariffCalculator(params);
 
-      // Add points to timeseries
-      this.distributionPrices.add(current, distributionPrice.toFixed(2));
-      this.totalPrices.add(current, totalPrice.toFixed(2));
+      const t1 = new Tariff('night', (this.priceParams.price2 + this.priceParams.tax));
+      t1.setHours([0, 1, 2, 3, 4, 5, 6, 22, 23]);
+      genericTariffCalculator.addTariff(t1);
+      genericTariffCalculator.calculate();
+      this.distributionPrices = genericTariffCalculator.getDistributionPrices();
+      this.totalPrices = genericTariffCalculator.getTotalPrices();
     }
-  }
+    if (this.product == 'seasonal') {
+      params.fallbackPrice = this.priceParams.price2 + this.priceParams.tax;
+      const genericTariffCalculator = new GenericTariffCalculator(params);
 
-  /**
-   * Returns price for given datetime using Night Distribution.
-   *
-   * @param ZonedDateTime zdt
-   *   Datetime to calculate the tariff for.
-   * @param object priceParams
-   *   Object with the following keys: price1, price2, tax
-   *
-   * @return float
-   *   Tariff c/kWh at the given time.
-   */
-  calculatePriceNightDistribution(zdt, priceParams) {
-    console.debug("tariff-calculator.js: Calculating fee for hour: " + zdt.toString());
-
-    // Day
-    if (zdt.isBetweenTimes('06:59', '22:00')) {
-      console.debug("tariff-calculator.js: Day");
-      return (priceParams.price1+priceParams.tax);
+      const t1 = new Tariff('winter-day', (this.priceParams.price1 + this.priceParams.tax));
+      t1.setMonths([1, 2, 3, 11, 12]);
+      t1.setWeekdays([1, 2, 3, 4, 5, 6]);
+      t1.setHours([7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]);
+      genericTariffCalculator.addTariff(t1);
+      genericTariffCalculator.calculate();
+      this.distributionPrices = genericTariffCalculator.getDistributionPrices();
+      this.totalPrices = genericTariffCalculator.getTotalPrices();
     }
-
-    // If we're still here it's night
-    console.debug("tariff-calculator.js: Night");
-    return (priceParams.price2+priceParams.tax);
-  }
-
-  /**
-   * Returns price for given datetime using Seasonal Distribution.
-   *
-   * @param ZonedDateTime zdt
-   *   Datetime to calculate the tariff for.
-   * @param object priceParams
-   *   Object with the following keys: price1, price2, tax
-   *
-   * @return float
-   *   Tariff c/kWh at the given time.
-   */
-  calculatePriceSeasonalDistribution(zdt, priceParams) {
-    console.debug("tariff-calculator.js: Calculating fee for hour: " + zdt.toString());
-
-    // Summer price
-    if (zdt.monthValue() >= 4 && zdt.monthValue() <= 10) {
-      console.debug("tariff-calculator.js: Summer");
-      return (priceParams.price2+priceParams.tax);
-    }
-
-    // Winter Sundays
-    if (zdt.dayOfWeek() == time.DayOfWeek.SUNDAY) {
-      console.debug("tariff-calculator.js: Sunday");
-      return (priceParams.price2+priceParams.tax);
-    }
-
-    // Winter daytime (except Sundays which has been covered already).
-    if (zdt.isBetweenTimes('06:59', '22:00')) {
-      console.debug("tariff-calculator.js: Winter day");
-      return (priceParams.price1+priceParams.tax);
-    }
-
-    // If we're still here it's winter night time
-    console.debug("tariff-calculator.js: Winter night");
-    return (priceParams.price2+priceParams.tax);
   }
 
   /**
