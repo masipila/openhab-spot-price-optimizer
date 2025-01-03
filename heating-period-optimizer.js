@@ -33,6 +33,10 @@ class HeatingPeriodOptimizer {
       this.error = true;
     }
 
+    // Add start and end to the parameters for GenericOptimizer
+    parameters.start = start;
+    parameters.end = end;
+
     // Only proceed with remaining initialization if all validations passed.
     if (!this.error) {
       this.start             = start;
