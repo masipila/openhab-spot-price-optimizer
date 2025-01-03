@@ -1,7 +1,10 @@
 const { assertBoolean, assertEqual, assertEqualTime } = require('./test-utils');
 const { HeatingPeriodOptimizer } = require('openhab-spot-price-optimizer/heating-period-optimizer');
 
-// MOCK ITEMS
+// Take a backup of global items variable so that we can restore it later.
+const openHABitems = items;
+
+// Mock priceItem with required methods.
 const mockPriceData = require('./test-data/prices-2023-11-08-pt60m.json');
 const priceItem = {
   name: 'mockPriceItem',
@@ -19,7 +22,7 @@ const priceItem = {
   }
 };
 
-// Mock forecastItem with required methods
+// Mock forecastItem with required methods.
 const forecastItem = {
   name: 'mockForecastItem',
   persistence: {
@@ -36,24 +39,29 @@ const forecastItem = {
   },
 };
 
-// Mock items object with getItem method
-const items = {
-  getItem: function(itemName) {
-    if (itemName === parameters.priceItem) {
-      return priceItem;
-    }
-    if (itemName === parameters.forecastItem) {
-      return forecastItem;
-    }
-    // Handle other items if necessary
-    return null;
-  },
-};
+/**
+ * Overrides the global.items variable.
+ */
+function mockItems() {
+  global.items = {
+    getItem: function(itemName) {
+      if (itemName === parameters.priceItem) {
+        return priceItem;
+      }
+      if (itemName === parameters.forecastItem) {
+        return forecastItem;
+      }
+      return null;
+    },
+  };
+}
 
-// Override openHAB items with mock.
-global.items = items;
-
-// MOCK SERVICES
+/**
+ * Restores the global.items variable.
+ */
+function restoreItems() {
+  global.items = openHABitems;
+}
 
 // Mock GenericOptimizer service
 const mockControlPoints = require('./test-data/control-points-2023-11-08-with-gaps.json');
@@ -178,6 +186,9 @@ function createMockGap(attributes) {
  * Expected: Expected number of heating periods are created and they are adjacent.
  */
 function testCalculateHeatingNeed() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -189,6 +200,9 @@ function testCalculateHeatingNeed() {
   const n = heatingPeriodOptimizer.periods.length;
   assertEqual(heatingPeriodOptimizer.periods.length, parameters.numberOfPeriods + 3, "There should be 3 more heating periods than defined in parameters.");
   assertEqualTime(heatingPeriodOptimizer.periods[0].getEnd(), heatingPeriodOptimizer.periods[1].getStart(), "HeatingPeriods should be adjacent.");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -199,6 +213,9 @@ function testCalculateHeatingNeed() {
  * Expected: Heating needs remain unchanged.
  */
 function testAdjustHeatingNeeds_NoAdjustment() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
 
@@ -227,6 +244,9 @@ function testAdjustHeatingNeeds_NoAdjustment() {
       `Period ${index + 1} heating need should remain unchanged.`
     );
   });
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -237,6 +257,9 @@ function testAdjustHeatingNeeds_NoAdjustment() {
  * Expected: Heating needs increase by adjustment / numberOfPeriods.
  */
 function testAdjustHeatingNeeds_PositiveAdjustment() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
 
@@ -271,6 +294,9 @@ function testAdjustHeatingNeeds_PositiveAdjustment() {
       `Period ${index + 1} heating need should have increased by ${periodAdjustment}.`
     );
   });
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -281,6 +307,9 @@ function testAdjustHeatingNeeds_PositiveAdjustment() {
  * Expected: Heating needs decrease by |adjustment| / numberOfPeriods.
  */
 function testAdjustHeatingNeeds_NegativeAdjustment() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
 
@@ -315,6 +344,9 @@ function testAdjustHeatingNeeds_NegativeAdjustment() {
       `Period ${index + 1} heating need should have decreased by ${-periodAdjustment}.`
     );
   });
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -325,6 +357,9 @@ function testAdjustHeatingNeeds_NegativeAdjustment() {
  * Expected: Heating needs should not become negative.
  */
 function testAdjustHeatingNeeds_AdjustmentToZero() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
 
@@ -356,6 +391,9 @@ function testAdjustHeatingNeeds_AdjustmentToZero() {
       `Period ${index + 1} heating need should be 0 instead of negative.`
     );
   });
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -366,6 +404,9 @@ function testAdjustHeatingNeeds_AdjustmentToZero() {
  * Expected: Heating needs should not become longer than the period.
  */
 function testAdjustHeatingNeeds_AdjustmentToMax() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
 
@@ -397,6 +438,9 @@ function testAdjustHeatingNeeds_AdjustmentToMax() {
       `Period ${index + 1} heating need should be 0 instead of negative.`
     );
   });
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -407,6 +451,9 @@ function testAdjustHeatingNeeds_AdjustmentToMax() {
  * Expected: flexibilities and heating needs remain unchanged.
  */
 function testNoTemperatureDrops() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -442,6 +489,9 @@ function testNoTemperatureDrops() {
   assertEqual(heatingPeriodOptimizer.periods[4].getHeatingNeed(), 1.09, "Period 5 heating need should remain unchanged.");
   assertEqual(heatingPeriodOptimizer.periods[5].getHeatingNeed(), 0.59, "Period 6 heating need should remain unchanged.");
   assertEqual(heatingPeriodOptimizer.periods[6].getHeatingNeed(), 0.35, "Period 7 heating need should remain unchanged.");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -452,6 +502,9 @@ function testNoTemperatureDrops() {
  * Expected: Heating needs are adjusted and flexibilities are set to 0 for the affected periods.
  */
 function testSignificantTemperatureDrops() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-10-05T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -484,6 +537,9 @@ function testSignificantTemperatureDrops() {
   assertEqual(heatingPeriodOptimizer.periods[4].flexibility, 0, "Period 5 flexibility should be set to 0.");
   assertEqual(heatingPeriodOptimizer.periods[5].flexibility, 0, "Period 6 flexibility should be set to 0.");
   assertEqual(heatingPeriodOptimizer.periods[6].flexibility, 0.5, "Period 7 flexibility should remain unchanged.");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -494,6 +550,9 @@ function testSignificantTemperatureDrops() {
  * Expected: Heating needs remain unchanged but flexibilities are set to 0 for the affected periods.
  */
 function testSingleTemperatureDrop() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-10-06T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -529,6 +588,9 @@ function testSingleTemperatureDrop() {
   assertEqual(heatingPeriodOptimizer.periods[4].getHeatingNeed(), 0.56, "Period 5 heating need should remain unchanged.");
   assertEqual(heatingPeriodOptimizer.periods[5].getHeatingNeed(), 0.41, "Period 6 heating need should remain unchanged.");
   assertEqual(heatingPeriodOptimizer.periods[6].getHeatingNeed(), 0.57, "Period 7 heating need should remain unchanged.");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -539,6 +601,9 @@ function testSingleTemperatureDrop() {
  * Expected: Gaps are detected correctly.
  */
 function testFindGaps() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -549,6 +614,9 @@ function testFindGaps() {
   const actual = heatingPeriodOptimizer.findGaps();
   const expected = require('./test-data/gaps-2023-11-08.json');
   assertEqual(JSON.stringify(actual), JSON.stringify(expected), "Calculated gaps should match to the correct ones.");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -559,6 +627,9 @@ function testFindGaps() {
  * Expected: null is returned since no shift is possible.
  */
 function testGetShortPeriodShiftNoDirections() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -567,6 +638,9 @@ function testGetShortPeriodShiftNoDirections() {
   const direction = heatingPeriodOptimizer.getShortPeriodShiftDirection(currentGap, null);
 
   assertBoolean(direction, false, "If no direction is available, the direction should be false.");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -577,6 +651,9 @@ function testGetShortPeriodShiftNoDirections() {
  * Expected: Return the direction for the available price.
  */
 function testGetShortPeriodShiftOnlyOneDirectionPossible() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -593,6 +670,9 @@ function testGetShortPeriodShiftOnlyOneDirectionPossible() {
   direction = heatingPeriodOptimizer.getShortPeriodShiftDirection(currentGap, previousGap);
 
   assertEqual(direction, "left", "Should shift left when only left is available.");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -603,6 +683,9 @@ function testGetShortPeriodShiftOnlyOneDirectionPossible() {
  * Expected: Shift in the direction of the lower price.
  */
 function testGetShortPeriodShiftDirectionComparePrices() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -618,6 +701,9 @@ function testGetShortPeriodShiftDirectionComparePrices() {
   currentGap  = createMockGap({ gapEndPrice: 1 });
   direction = heatingPeriodOptimizer.getShortPeriodShiftDirection(currentGap, previousGap);
   assertEqual(direction, "right", "Should shift right when right price is smaller.");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -628,6 +714,9 @@ function testGetShortPeriodShiftDirectionComparePrices() {
  * Expected: Shifting is allowed in the direction of the lower price.
  */
 function testGetShortPeriodShiftDirectionAllowedShift() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -644,6 +733,9 @@ function testGetShortPeriodShiftDirectionAllowedShift() {
 
   // Assert that shifting to the left is allowed
   assertEqual(direction, 'left', "Should shift left when price difference is within shiftPriceLimit and left price is lower.");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -654,6 +746,9 @@ function testGetShortPeriodShiftDirectionAllowedShift() {
  * Expected: No shifting is allowed.
  */
 function testGetShortPeriodShiftDirectionRestrictedShift() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-08T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -670,6 +765,9 @@ function testGetShortPeriodShiftDirectionRestrictedShift() {
 
   // Assert that no shifting is allowed due to shiftPriceLimit
   assertBoolean(direction, false, "No shift should be allowed when price difference exceeds shiftPriceLimit.");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
@@ -680,6 +778,9 @@ function testGetShortPeriodShiftDirectionRestrictedShift() {
  * Expected: The heating periods should not be merged by shifting.
  */
 function testMergeLongPeriodWithTwoGaps() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2024-10-04T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -720,12 +821,18 @@ function testMergeLongPeriodWithTwoGaps() {
 
   // Assert that shiftHeating was NOT called since the heating period is longer than the shortThreshold
   assertEqual(shiftHeatingCalled, false, "shiftHeating should not be called for the long heating period between the two gaps.");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
  * Tests the shiftHeatingLeft
  */
 function testShiftHeatingLeft() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-12T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -763,12 +870,18 @@ function testShiftHeatingLeft() {
 
   // Verify the second call sets control = 0 for the adjusted next heating end time
   assertEqual(JSON.stringify(mockGenericOptimizer.calls[1]), JSON.stringify(expectedCalls[1]), "Second call should set control = 0 for the next heating end");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 /**
  * Tests the shiftHeatingRight
  */
 function testShiftHeatingRight() {
+  // Mock items.
+  mockItems();
+
   const start = time.toZDT('2023-11-12T00:00');
   const end = start.plusDays(1);
   const heatingPeriodOptimizer = createHeatingPeriodOptimizer(start, end, parameters);
@@ -806,6 +919,9 @@ function testShiftHeatingRight() {
 
   // Verify the second call sets control = 0 for the adjusted next heating end time
   assertEqual(JSON.stringify(mockGenericOptimizer.calls[1]), JSON.stringify(expectedCalls[1]), "Second call should set control = 0 for the previous heating start");
+
+  // Cleanup: restore mocked items.
+  restoreItems();
 }
 
 // Export the test functions
