@@ -63,13 +63,10 @@ class GenericTariffCalculator {
           distributionPrice = t.getPrice();
           break;
         }
-        else {
-          console.debug(`${current}: no match to ${t.getName()}`);
-        }
       }
       // If no tariff was found, use the fallback price.
       if (distributionPrice === null) {
-        console.debug(`${current}: Fallback price (${this.fallbackPrice})`);
+        console.debug(`${current}: fallback price (${this.fallbackPrice})`);
         distributionPrice = this.fallbackPrice;
       }
 
