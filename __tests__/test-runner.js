@@ -6,7 +6,9 @@ const testFiles = [
   './generic-optimizer.test.js',
   './validation-helper.test.js',
   './heating-period-optimizer.test.js',
-  './load-calculator.test.js'
+  './load-calculator.test.js',
+  './tariff.test.js',
+  './generic-tariff-calculator.test.js'
 ];
 
 const { displayTestSummary } = require('./test-utils');
