@@ -17,11 +17,3 @@ openhab-spot-price-optimizer is developed by [Markus Sipilä](https://fi.linkedi
 You are more than welcome to join the discussion around this solution on the [openHAB community forum](https://community.openhab.org/t/control-a-water-heater-and-ground-source-heat-pump-based-on-cheap-hours-of-spot-priced-electricity/136566).
 
 Support requests to the community forum, please, not to the issues of this github repo. I have spent a beer (or three) writing these instructions so that they would be as complete as possible. I kindly ask you to respect this effort and read this documentation once more before asking for support on the community forum. This request does not mean that you would not be welcome to the community discussions, quite the contrary. It simply means that most problems can be fixed by double checking that your implementation follows the documentation and checking your logs.
-
-# Support the development
-In addition to being home automation enthusiast, I'm also semi-professional athlete targeting the 2026 Winter Olympics in mixed doubles curling. If you like the Spot Price Optimizer and want to support our journey towards Milano-Cortina, you can do that by donating a sum of your choice to our curling club's bank account. Fundraising in Finland requires a permit, our permit number is RA/2024/1837.
-* Kisakallio Curling Club ry (VAT ID FI30644384)
-* IBAN: FI94 5280 0020 0319 02
-* BIC: OKOYFIHH
-* Reference number: 20006
-* Message (if you can't use the reference number): openhab optimizer
